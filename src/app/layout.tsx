@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
   other: {
-    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
   },
 };
 
