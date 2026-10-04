@@ -7,12 +7,12 @@ import { BootScreen } from "@/components/sheet-ui";
 import { useStore } from "@/lib/store";
 
 export default function SheetLayout({ children }: { children: ReactNode }) {
-  const { ready, user } = useStore();
+  const { ready, sessionKnown, user } = useStore();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !sessionKnown) return;
     if (!user) {
       router.replace("/");
       return;
@@ -25,9 +25,9 @@ export default function SheetLayout({ children }: { children: ReactNode }) {
     } else if (clientOnly && user.role !== "client") {
       router.replace("/coach");
     }
-  }, [ready, user, router, pathname]);
+  }, [ready, sessionKnown, user, router, pathname]);
 
-  if (!ready || !user) return <BootScreen />;
+  if (!ready || !sessionKnown || !user) return <BootScreen />;
 
   const workoutDetail = /^\/workouts\/[^/]+$/.test(pathname);
   const clientOnly =

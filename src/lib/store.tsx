@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useSyncExternalStore, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { isISODate, todayISO } from "@/lib/format";
 import { createSeed } from "@/lib/seed";
 import type {
@@ -19,12 +26,16 @@ const SESSION_KEY = "repsheet.user";
 
 type Snapshot = {
   ready: boolean;
+  // False until this tab has read localStorage. Server HTML cannot know the
+  // signed-in person, and a redirect before this read sends a reload to login.
+  sessionKnown: boolean;
   data: AppData;
   userId: string | null;
 };
 
 type StoreValue = {
   ready: boolean;
+  sessionKnown: boolean;
   data: AppData | null;
   user: User | null;
   signIn: (email: string, password: string) => SignInResult;
@@ -54,12 +65,16 @@ type StoreValue = {
 };
 
 const serverSnapshot: Snapshot = {
-  ready: false,
+  ready: true,
+  sessionKnown: false,
   data: createSeed(),
   userId: null,
 };
 
-let clientSnapshot: Snapshot | null = null;
+// Start as the server snapshot so hydration matches. Local data is applied
+// after mount; reading it inside getSnapshot during hydration leaves the
+// boot screen in place.
+let snapshot: Snapshot = serverSnapshot;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -97,19 +112,25 @@ function loadData(): AppData {
 }
 
 function readClient(): Snapshot {
-  const data = loadData();
-  const storedUser = localStorage.getItem(SESSION_KEY);
-  const valid = Boolean(storedUser && data.users.some((person) => person.id === storedUser));
-  return {
-    ready: true,
-    data,
-    userId: valid ? storedUser : null,
-  };
+  try {
+    const data = loadData();
+    const storedUser = localStorage.getItem(SESSION_KEY);
+    const valid = Boolean(
+      storedUser && data.users.some((person) => person.id === storedUser),
+    );
+    return {
+      ready: true,
+      sessionKnown: true,
+      data,
+      userId: valid ? storedUser : null,
+    };
+  } catch {
+    return { ready: true, sessionKnown: true, data: createSeed(), userId: null };
+  }
 }
 
 function getSnapshot() {
-  if (!clientSnapshot) clientSnapshot = readClient();
-  return clientSnapshot;
+  return snapshot;
 }
 
 function getServerSnapshot() {
@@ -122,7 +143,7 @@ function subscribe(listener: () => void) {
 }
 
 function commit(next: Snapshot) {
-  clientSnapshot = next;
+  snapshot = next;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedSlice(next.data)));
   if (next.userId) localStorage.setItem(SESSION_KEY, next.userId);
   else localStorage.removeItem(SESSION_KEY);
@@ -158,8 +179,14 @@ function roundOptional(value: number | undefined) {
 const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const user = snapshot.ready ? currentUser(snapshot) : null;
+  const current = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  useEffect(() => {
+    snapshot = readClient();
+    emit();
+  }, []);
+
+  const user = current.ready ? currentUser(current) : null;
 
   const signIn = useCallback((email: string, password: string): SignInResult => {
     const current = getSnapshot();
@@ -409,12 +436,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       current.userId && seed.users.some((person) => person.id === current.userId)
         ? current.userId
         : null;
-    commit({ ready: true, data: seed, userId });
+    commit({ ready: true, sessionKnown: true, data: seed, userId });
   }, []);
 
   const value: StoreValue = {
-    ready: snapshot.ready,
-    data: snapshot.ready ? snapshot.data : null,
+    ready: current.ready,
+    sessionKnown: current.sessionKnown,
+    data: current.ready ? current.data : null,
     user,
     signIn,
     signOut,

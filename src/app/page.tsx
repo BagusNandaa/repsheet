@@ -9,18 +9,18 @@ import { useStore } from "@/lib/store";
 import type { User } from "@/lib/types";
 
 export default function LoginPage() {
-  const { ready, user, data, signIn } = useStore();
+  const { ready, sessionKnown, user, data, signIn } = useStore();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!ready || !user) return;
+    if (!ready || !sessionKnown || !user) return;
     router.replace(user.role === "coach" ? "/coach" : "/home");
-  }, [ready, user, router]);
+  }, [ready, sessionKnown, user, router]);
 
-  if (!ready || !data || user) return <BootScreen />;
+  if (!ready || !sessionKnown || !data || user) return <BootScreen />;
 
   const people = [...data.users].sort((a, b) => {
     if (a.role !== b.role) return a.role === "coach" ? -1 : 1;
