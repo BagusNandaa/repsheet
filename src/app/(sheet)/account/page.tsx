@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BackupControls } from "@/components/backup-controls";
 import { PageIntro, actionClass } from "@/components/sheet-ui";
 import { useStore } from "@/lib/store";
 
@@ -59,6 +60,7 @@ export default function AccountPage() {
         </p>
       </div>
 
+      <BackupControls />
       {data ? (
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-2xl">Week</h2>

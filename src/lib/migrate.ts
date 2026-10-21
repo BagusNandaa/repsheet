@@ -22,6 +22,9 @@ export const STORAGE_KEY_V1 = "repsheet.v1";
 /** Current key. `version` inside the JSON matches SHEET_VERSION. */
 export const STORAGE_KEY_V2 = "repsheet.v2";
 
+/** Who is signed in on this device. Separate from the sheet JSON. */
+export const SESSION_KEY = "repsheet.user";
+
 /**
  * Safety cap when a stored set count is an integer but absurdly large.
  * The coach form only saves 1–20. Counts above this keep the first 100 rows.
