@@ -1,4 +1,5 @@
 import { isISODate } from "./format";
+import { readProgressionRule, readTargetOverride } from "./progression";
 import { SHEET_VERSION } from "./types";
 import type {
   AppData,
@@ -11,6 +12,8 @@ import type {
   Weekday,
   WeeklyPlan,
   WeekStart,
+  Workout,
+  WorkoutMove,
 } from "./types";
 
 /** Previous key. One weight, one rep count, and a set count per exercise. */
@@ -194,6 +197,36 @@ function normalizeOverride(raw: unknown, index: number): PlanOverride | null {
   return { id, clientId, date, kind: "move", toDate };
 }
 
+function migrateMove(raw: unknown, index: number): WorkoutMove {
+  const move = isRecord(raw) ? raw : {};
+  return {
+    id: idField(move.id, `move-${index + 1}`),
+    exerciseId: stringField(move.exerciseId, ""),
+    sets: typeof move.sets === "number" ? move.sets : 1,
+    reps: stringField(move.reps, ""),
+    progression: move.progression == null ? null : readProgressionRule(move.progression),
+    targetOverride: readTargetOverride(move.targetOverride),
+  };
+}
+
+function migrateWorkout(raw: unknown, index: number): Workout {
+  const workout = isRecord(raw) ? raw : {};
+  const moves = Array.isArray(workout.moves) ? workout.moves : [];
+  return {
+    id: idField(workout.id, `workout-${index + 1}`),
+    clientId: stringField(workout.clientId, ""),
+    name: stringField(workout.name, ""),
+    assignedAt: stringField(workout.assignedAt, ""),
+    progression: readProgressionRule(workout.progression),
+    moves: moves.map(migrateMove),
+  };
+}
+
+function migrateWorkouts(raw: unknown): Workout[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(migrateWorkout);
+}
+
 function migrateOverrides(raw: unknown): PlanOverride[] {
   if (!Array.isArray(raw)) return [];
   const bySource = new Map<string, PlanOverride>();
@@ -212,6 +245,8 @@ function migrateOverrides(raw: unknown): PlanOverride[] {
  * keeps client logs, warm-ups, and completed times as stored.
  * Week plans, single-date overrides, and the week start are kept when the
  * sheet has them. An older v2 sheet gets an empty plan and Monday.
+ * A workout with no progression rule becomes None. A move with no rule
+ * follows the workout. A missing target override stays empty.
  */
 export function migrateSheet(raw: unknown): PersistedSheet {
   const record = isRecord(raw) ? raw : {};
@@ -222,7 +257,7 @@ export function migrateSheet(raw: unknown): PersistedSheet {
     clients: arrayOf(record.clients),
     measurements: arrayOf(record.measurements),
     sessions: sessions.map(migrateSession),
-    workouts: arrayOf(record.workouts),
+    workouts: migrateWorkouts(record.workouts),
     plans: migratePlans(record.plans),
     overrides: migrateOverrides(record.overrides),
     weekStartsOn: migrateWeekStart(record.weekStartsOn),

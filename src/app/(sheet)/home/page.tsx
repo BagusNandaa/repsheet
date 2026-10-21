@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { ExerciseRecordLinks } from "@/components/exercise-history";
 import { SessionCard } from "@/components/session-card";
 import { StatsBlock } from "@/components/stats-block";
 import { TodayCard } from "@/components/today-card";
@@ -107,6 +108,16 @@ export default function ClientHomePage() {
             show up here.
           </EmptyNote>
         )}
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="font-display text-2xl">Records</h2>
+        <ExerciseRecordLinks
+          exercises={data.exercises}
+          sessions={data.sessions}
+          clientId={user.clientId}
+          hrefFor={(exerciseId) => `/exercises/${exerciseId}`}
+        />
       </section>
 
       <section className="flex flex-col gap-4">

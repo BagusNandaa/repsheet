@@ -114,7 +114,25 @@ test("migrates a v1 session into per-set rows without dropping other sheet data"
   assert.deepEqual(migrated.users, legacy.users);
   assert.deepEqual(migrated.clients, legacy.clients);
   assert.deepEqual(migrated.measurements, legacy.measurements);
-  assert.deepEqual(migrated.workouts, legacy.workouts);
+  assert.deepEqual(migrated.workouts, [
+    {
+      id: "workout-1",
+      clientId: "client-jordan",
+      name: "Strength A",
+      assignedAt: "2026-09-30",
+      progression: { kind: "none" },
+      moves: [
+        {
+          id: "wm-1",
+          exerciseId: "ex-back-squat",
+          sets: 4,
+          reps: "5",
+          progression: null,
+          targetOverride: null,
+        },
+      ],
+    },
+  ]);
   assert.equal(migrated.measurements[0]?.weightKg, 72.8);
   assert.equal(migrated.workouts[0]?.moves[0]?.sets, 4);
   assert.equal(migrated.workouts[0]?.moves[0]?.reps, "5");
@@ -198,6 +216,61 @@ test("migrating a version 2 sheet keeps client logs, warm-ups, and clock times",
   assert.deepEqual(once.plans, []);
   assert.deepEqual(once.overrides, []);
   assert.equal(once.weekStartsOn, "monday");
+});
+
+test("a version 2 workout keeps its progression rule and fills None when the rule is missing", () => {
+  const sheet = {
+    version: SHEET_VERSION,
+    users: [{ id: "u" }],
+    clients: [{ id: "c" }],
+    measurements: [],
+    sessions: [],
+    plans: [],
+    overrides: [],
+    weekStartsOn: "monday" as const,
+    workouts: [
+      {
+        id: "w1",
+        clientId: "c",
+        name: "A",
+        assignedAt: "2026-10-01",
+        progression: { kind: "linear", incrementKg: 5, stallSessions: 2 },
+        moves: [
+          {
+            id: "m1",
+            exerciseId: "ex-back-squat",
+            sets: 3,
+            reps: "5",
+            progression: { kind: "double", incrementKg: 2.5, stallSessions: 3, repMin: 8, repMax: 12 },
+            targetOverride: { weightKg: 80, reps: 5 },
+          },
+        ],
+      },
+      {
+        id: "w2",
+        clientId: "c",
+        name: "B",
+        assignedAt: "2026-10-02",
+        moves: [{ id: "m2", exerciseId: "ex-plank", sets: 3, reps: "40 sec" }],
+      },
+    ],
+  };
+  const once = migrateSheet(sheet);
+  const twice = migrateSheet(once);
+  assert.deepEqual(once.workouts[0]?.progression, { kind: "linear", incrementKg: 5, stallSessions: 2 });
+  assert.deepEqual(once.workouts[0]?.moves[0]?.progression, {
+    kind: "double",
+    incrementKg: 2.5,
+    stallSessions: 3,
+    repMin: 8,
+    repMax: 12,
+  });
+  assert.deepEqual(once.workouts[0]?.moves[0]?.targetOverride, { weightKg: 80, reps: 5 });
+  assert.deepEqual(once.workouts[1]?.progression, { kind: "none" });
+  assert.equal(once.workouts[1]?.moves[0]?.progression, null);
+  assert.equal(once.workouts[1]?.moves[0]?.targetOverride, null);
+  assert.equal(once.workouts[1]?.moves[0]?.reps, "40 sec");
+  assert.deepEqual(twice.workouts, once.workouts);
 });
 
 test("a version 2 sheet keeps its week plan and does not rewrite sessions to add one", () => {

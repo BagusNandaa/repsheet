@@ -19,7 +19,9 @@ export default function SheetLayout({ children }: { children: ReactNode }) {
     }
     const workoutDetail = /^\/workouts\/[^/]+$/.test(pathname);
     const clientOnly =
-      pathname === "/home" || (pathname.startsWith("/workouts") && !workoutDetail);
+      pathname === "/home" ||
+      pathname.startsWith("/exercises") ||
+      (pathname.startsWith("/workouts") && !workoutDetail);
     if (pathname.startsWith("/coach") && user.role !== "coach") {
       router.replace("/home");
     } else if (clientOnly && user.role !== "client") {
@@ -31,7 +33,9 @@ export default function SheetLayout({ children }: { children: ReactNode }) {
 
   const workoutDetail = /^\/workouts\/[^/]+$/.test(pathname);
   const clientOnly =
-    pathname === "/home" || (pathname.startsWith("/workouts") && !workoutDetail);
+    pathname === "/home" ||
+    pathname.startsWith("/exercises") ||
+    (pathname.startsWith("/workouts") && !workoutDetail);
   if (pathname.startsWith("/coach") && user.role !== "coach") return <BootScreen />;
   if (clientOnly && user.role !== "client") return <BootScreen />;
 
