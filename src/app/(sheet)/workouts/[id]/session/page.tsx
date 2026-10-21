@@ -6,6 +6,7 @@ import { ClientSessionScreen } from "@/components/client-session";
 import { Button } from "@/components/ui/button";
 import { BackLink, EmptyNote, PageIntro, actionClass } from "@/components/sheet-ui";
 import { sessionToResume } from "@/lib/session-plan";
+import { workoutHasTarget } from "@/lib/progression";
 import { useStore } from "@/lib/store";
 
 export default function WorkoutSessionPage() {
@@ -59,7 +60,9 @@ export default function WorkoutSessionPage() {
       >
         <BackLink href={`/workouts/${assigned.id}`}>{assigned.name}</BackLink>
         <PageIntro title={assigned.name}>
-          Log each set. Weight and reps start from your last session.
+          {workoutHasTarget(assigned)
+            ? "Log each set. Weight and reps start from the progression target."
+            : "Log each set. Weight and reps start from your last session."}
         </PageIntro>
         <Button type="button" className={actionClass} onClick={begin}>
           Start session
@@ -72,6 +75,7 @@ export default function WorkoutSessionPage() {
     <ClientSessionScreen
       key={session.id}
       session={session}
+      workout={assigned}
       workoutName={assigned.name}
       clientId={clientId}
       exercises={data.exercises}

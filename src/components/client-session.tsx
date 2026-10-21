@@ -23,6 +23,7 @@ import {
   type RestTimer,
 } from "@/lib/rest-timer";
 import {
+  exerciseTarget,
   firstOpenExerciseIndex,
   formatWeightInput,
   lastExercisePrescription,
@@ -32,7 +33,7 @@ import {
   stepReps,
   stepWeight,
 } from "@/lib/session-plan";
-import type { Exercise, Result, Session, SessionSet } from "@/lib/types";
+import type { Exercise, Result, Session, SessionSet, Workout } from "@/lib/types";
 import { cn } from "cn";
 
 let clockNow = 0;
@@ -169,7 +170,7 @@ function SetRow({
   index: number;
   sessionId: string;
   flags: PrFlag[];
-  onUpdate: (patch: { weightKg?: number; reps?: number; done?: boolean }) => Result;
+  onUpdate: (patch: { weightKg?: number; reps?: number; done?: boolean; isWarmup?: boolean }) => Result;
 }) {
   const [weightText, setWeightText] = useState<string | null>(null);
   const [repsText, setRepsText] = useState<string | null>(null);
@@ -181,11 +182,27 @@ function SetRow({
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 dark:rounded-none">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="font-display text-xl">Set {index + 1}</p>
+        <p className="font-display text-xl">
+          Set {index + 1}
+          {set.isWarmup ? " · Warm-up" : ""}
+        </p>
         <p className={cn("text-sm", set.done ? "text-[var(--brand-text)]" : "text-muted-foreground")}>
           {set.done ? "Done" : "Not logged"}
         </p>
       </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-pressed={set.isWarmup}
+        className={cn(
+          "self-start",
+          set.isWarmup && "border-transparent bg-[var(--brand-soft)] text-[var(--brand-text)]",
+        )}
+        onClick={() => onUpdate({ isWarmup: !set.isWarmup })}
+      >
+        {set.isWarmup ? "Warm-up" : "Mark warm-up"}
+      </Button>
       {flags.length > 0 ? (
         <p className="text-sm font-medium text-[var(--brand-text)]" role="status">
           PR · {flags.map((flag) => flag.label).join(" · ")}
@@ -323,6 +340,7 @@ function RestTimerPanel({
 
 export function ClientSessionScreen({
   session,
+  workout,
   workoutName,
   clientId,
   exercises,
@@ -331,6 +349,7 @@ export function ClientSessionScreen({
   onUpdateSet,
 }: {
   session: Session;
+  workout: Workout;
   workoutName: string;
   clientId: string;
   exercises: Exercise[];
@@ -341,6 +360,7 @@ export function ClientSessionScreen({
     weightKg?: number;
     reps?: number;
     done?: boolean;
+    isWarmup?: boolean;
   }) => Result;
 }) {
   const now = useSyncExternalStore(subscribeClock, getClockSnapshot, () => 0);
@@ -353,13 +373,22 @@ export function ClientSessionScreen({
   const safeIndex = exerciseCount === 0 ? 0 : Math.min(exerciseIndex, exerciseCount - 1);
   const exercise = session.exercises[safeIndex];
   const libraryExercise = exercise ? exerciseById(exercises, exercise.exerciseId) : undefined;
-  const prior = exercise
-    ? lastExercisePrescription(
-        history.filter((item) => item.id !== session.id),
-        clientId,
-        exercise.exerciseId,
-      )
+  const priorSessions = history.filter((item) => item.id !== session.id);
+  const move = exercise
+    ? (workout.moves.find((item) => item.exerciseId === exercise.exerciseId) ?? null)
     : null;
+  const prior = exercise
+    ? lastExercisePrescription(priorSessions, clientId, exercise.exerciseId)
+    : null;
+  const target =
+    exercise && move
+      ? exerciseTarget({
+          sessions: priorSessions,
+          clientId,
+          workout,
+          move,
+        })
+      : null;
   const records = exercise
     ? exerciseRecords(history, clientId, exercise.exerciseId)
     : null;
@@ -419,12 +448,23 @@ export function ClientSessionScreen({
         <FormError>{error}</FormError>
         {exercise ? (
           <>
-            <p className="text-sm leading-5 text-muted-foreground">
-              {prior
-                ? "Weight and reps from your last session. Change them if today is different."
-                : "No earlier session for this move. Weight and reps start from the workout target."}
-              {libraryExercise ? ` ${libraryExercise.cue}` : ""}
-            </p>
+            {target?.reason ? (
+              <div className="rounded-xl border border-border bg-card px-4 py-3 dark:rounded-none">
+                <p className="text-sm font-medium tabular-nums">
+                  Target {formatKg(target.weightKg)} × {target.reps}
+                </p>
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">{target.reason}</p>
+              </div>
+            ) : (
+              <p className="text-sm leading-5 text-muted-foreground">
+                {prior
+                  ? "Weight and reps from your last session. Change them if today is different."
+                  : "No earlier session for this move. Weight and reps start from the workout target."}
+              </p>
+            )}
+            {libraryExercise ? (
+              <p className="text-sm leading-5 text-muted-foreground">{libraryExercise.cue}</p>
+            ) : null}
             {records?.estimated1Rm ? (
               <p className="text-sm text-muted-foreground tabular-nums">
                 Estimated 1RM {formatEstimateKg(records.estimated1Rm.e1rmKg)} from{" "}

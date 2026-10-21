@@ -6,14 +6,44 @@ import { useParams, useRouter } from "next/navigation";
 import { VideoPlayer } from "@/components/video-player";
 import { Button } from "@/components/ui/button";
 import { BackLink, EmptyNote, FormError, actionClass } from "@/components/sheet-ui";
-import { exerciseById, formatDate } from "@/lib/format";
-import { openClientSession } from "@/lib/session-plan";
+import { ProgressionEditor } from "@/components/progression-editor";
+import { exerciseById, formatDate, formatKg } from "@/lib/format";
+import { progressionSummary } from "@/lib/progression";
+import { exerciseTarget, openClientSession } from "@/lib/session-plan";
 import { useStore } from "@/lib/store";
+import type { Session, Workout, WorkoutMove } from "@/lib/types";
+
+function MoveTarget({
+  sessions,
+  workout,
+  move,
+}: {
+  sessions: readonly Session[];
+  workout: Workout;
+  move: WorkoutMove;
+}) {
+  const target = exerciseTarget({
+    sessions,
+    clientId: workout.clientId,
+    workout,
+    move,
+  });
+  if (!target.reason) return null;
+  return (
+    <p className="mt-1 text-sm leading-5 text-muted-foreground">
+      <span className="font-medium text-foreground tabular-nums">
+        Target {formatKg(target.weightKg)} × {target.reps}
+      </span>
+      {" · "}
+      {target.reason}
+    </p>
+  );
+}
 
 export default function WorkoutDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { data, user, startClientWorkout } = useStore();
+  const { data, user, startClientWorkout, saveWorkoutProgression } = useStore();
   const router = useRouter();
   const [startError, setStartError] = useState<string | null>(null);
   if (!data || !user || !id) return null;
@@ -48,7 +78,19 @@ export default function WorkoutDetailPage() {
           Assigned {formatDate(workout.assignedAt)}
           {user.role === "coach" && client ? ` · ${client.name}` : ""}
         </p>
+        {user.role === "client" ? (
+          <p className="mt-2 text-sm text-muted-foreground">{progressionSummary(workout.progression)}</p>
+        ) : null}
       </div>
+      {user.role === "coach" ? (
+        <ProgressionEditor
+          key={workout.id}
+          workout={workout}
+          sessions={data.sessions}
+          exercises={data.exercises}
+          onSave={saveWorkoutProgression}
+        />
+      ) : null}
       {user.role === "client" ? (
         <>
           <Button
@@ -81,6 +123,9 @@ export default function WorkoutDetailPage() {
                 <p className="mt-1 text-base tabular-nums">
                   {move.sets} × {move.reps}
                 </p>
+                {user.role === "client" ? (
+                  <MoveTarget sessions={data.sessions} workout={workout} move={move} />
+                ) : null}
                 {exercise ? (
                   <p className="mt-1 text-sm leading-5 text-muted-foreground">{exercise.cue}</p>
                 ) : null}

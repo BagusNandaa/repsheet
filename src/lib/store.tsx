@@ -17,6 +17,7 @@ import {
 } from "@/lib/migrate";
 import { createSeed } from "@/lib/seed";
 import { planWorkoutId, WEEKDAYS } from "@/lib/schedule";
+import { canonicalProgression } from "@/lib/progression";
 import { applyClientSetUpdate, planClientSession } from "@/lib/session-plan";
 import type {
   AddClientResult,
@@ -24,9 +25,11 @@ import type {
   CoachLoggedExercise,
   Measurement,
   PlanOverride,
+  ProgressionRule,
   Result,
   SignInResult,
   StartWorkoutResult,
+  TargetOverride,
   User,
   Weekday,
   WeeklyPlan,
@@ -71,7 +74,17 @@ type StoreValue = {
   assignWorkout: (input: {
     clientId: string;
     name: string;
-    moves: Array<Omit<WorkoutMove, "id">>;
+    progression?: ProgressionRule;
+    moves: Array<Omit<WorkoutMove, "id" | "targetOverride"> & { targetOverride?: TargetOverride | null }>;
+  }) => Result;
+  saveWorkoutProgression: (input: {
+    workoutId: string;
+    progression: ProgressionRule;
+    moves: Array<{
+      id: string;
+      progression: ProgressionRule | null;
+      targetOverride: TargetOverride | null;
+    }>;
   }) => Result;
   startClientWorkout: (workoutId: string) => StartWorkoutResult;
   saveWeeklyPlan: (input: { clientId: string; days: Partial<Record<Weekday, string>> }) => Result;
@@ -89,6 +102,7 @@ type StoreValue = {
     weightKg?: number;
     reps?: number;
     done?: boolean;
+    isWarmup?: boolean;
   }) => Result;
   resetDemo: () => void;
 };
@@ -414,7 +428,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (input: {
       clientId: string;
       name: string;
-      moves: Array<Omit<WorkoutMove, "id">>;
+      progression?: ProgressionRule;
+      moves: Array<Omit<WorkoutMove, "id" | "targetOverride"> & { targetOverride?: TargetOverride | null }>;
     }): Result => {
       const current = getSnapshot();
       const denied = coachError(currentUser(current));
@@ -427,6 +442,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: "Name the workout in 2 to 60 characters." };
       }
       if (input.moves.length === 0) return { ok: false, error: "Add at least one move." };
+      const progression = canonicalProgression(input.progression ?? { kind: "none" });
+      if (!progression.ok) return progression;
+      const moves: WorkoutMove[] = [];
       for (const move of input.moves) {
         if (!current.data.exercises.some((item) => item.id === move.exerciseId)) {
           return { ok: false, error: "Choose an exercise from the library." };
@@ -438,6 +456,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (reps.length < 1 || reps.length > 20) {
           return { ok: false, error: "Enter the reps, such as 8 or 40 sec." };
         }
+        let moveRule: ProgressionRule | null = null;
+        if (move.progression) {
+          const checked = canonicalProgression(move.progression);
+          if (!checked.ok) return checked;
+          moveRule = checked.rule;
+        }
+        moves.push({
+          id: crypto.randomUUID(),
+          exerciseId: move.exerciseId,
+          sets: move.sets,
+          reps,
+          progression: moveRule,
+          targetOverride: null,
+        });
       }
       commit({
         ...current,
@@ -450,13 +482,68 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               clientId: input.clientId,
               name,
               assignedAt: todayISO(),
-              moves: input.moves.map((move) => ({
-                ...move,
-                id: crypto.randomUUID(),
-                reps: move.reps.trim(),
-              })),
+              progression: progression.rule,
+              moves,
             },
           ],
+        },
+      });
+      return { ok: true };
+    },
+    [],
+  );
+
+  const saveWorkoutProgression = useCallback(
+    (input: {
+      workoutId: string;
+      progression: ProgressionRule;
+      moves: Array<{
+        id: string;
+        progression: ProgressionRule | null;
+        targetOverride: TargetOverride | null;
+      }>;
+    }): Result => {
+      const current = getSnapshot();
+      const denied = coachError(currentUser(current));
+      if (denied) return { ok: false, error: denied };
+      const workout = current.data.workouts.find((item) => item.id === input.workoutId);
+      if (!workout) return { ok: false, error: "That workout is not on this sheet." };
+      const progression = canonicalProgression(input.progression);
+      if (!progression.ok) return progression;
+      const moves: WorkoutMove[] = [];
+      for (const move of workout.moves) {
+        const patch = input.moves.find((item) => item.id === move.id);
+        if (!patch) {
+          moves.push(move);
+          continue;
+        }
+        let moveRule: ProgressionRule | null = null;
+        if (patch.progression) {
+          const checked = canonicalProgression(patch.progression);
+          if (!checked.ok) return checked;
+          moveRule = checked.rule;
+        }
+        let targetOverride: TargetOverride | null = null;
+        if (patch.targetOverride) {
+          const weightKg = round1(patch.targetOverride.weightKg);
+          const reps = patch.targetOverride.reps;
+          if (!Number.isFinite(weightKg) || weightKg < 0 || weightKg > 400) {
+            return { ok: false, error: "Enter a target weight from 0 to 400 kg." };
+          }
+          if (!Number.isInteger(reps) || reps < 0 || reps > 100) {
+            return { ok: false, error: "Enter target reps from 0 to 100." };
+          }
+          targetOverride = { weightKg, reps };
+        }
+        moves.push({ ...move, progression: moveRule, targetOverride });
+      }
+      commit({
+        ...current,
+        data: {
+          ...current.data,
+          workouts: current.data.workouts.map((item) =>
+            item.id === workout.id ? { ...item, progression: progression.rule, moves } : item,
+          ),
         },
       });
       return { ok: true };
@@ -596,6 +683,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       weightKg?: number;
       reps?: number;
       done?: boolean;
+      isWarmup?: boolean;
     }): Result => {
       const current = getSnapshot();
       const user = currentUser(current);
@@ -606,10 +694,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!session || session.clientId !== user.clientId) {
         return { ok: false, error: "That session is not on your sheet." };
       }
-      const patch: { weightKg?: number; reps?: number; done?: boolean } = {};
+      const patch: { weightKg?: number; reps?: number; done?: boolean; isWarmup?: boolean } = {};
       if (input.weightKg !== undefined) patch.weightKg = input.weightKg;
       if (input.reps !== undefined) patch.reps = input.reps;
       if (input.done !== undefined) patch.done = input.done;
+      if (input.isWarmup !== undefined) patch.isWarmup = input.isWarmup;
       const updated = applyClientSetUpdate(
         current.data.sessions,
         input.sessionId,
@@ -648,6 +737,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addMeasurement,
     addSession,
     assignWorkout,
+    saveWorkoutProgression,
     saveWeeklyPlan,
     setDateOverride,
     clearDateOverride,

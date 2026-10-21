@@ -37,7 +37,7 @@ Use the browser menu to add Repsheet to the home screen, then open it from the i
 - Clients log their own sets (decision 2026-10-21). A session stores who logged it, coach or client, and an optional link to the assigned workout.
 - Each exercise in a session is stored as one row per set: weight, reps, done, warm-up, and completed time.
 - The coach session form still takes one weight, one rep count, and a set count. Saving writes that many matching set rows.
-- A client opens an assigned workout and logs each set. Weight and reps start from their last session for that exercise, or from the workout target when they have not logged it before. 0 kg means bodyweight. Marking a set done starts a 90 second rest.
+- A client opens an assigned workout and logs each set. With no progression rule, weight and reps start from their last session for that exercise, or from the workout target when they have not logged it before. When a rule is set, the sets start at the progression target and the screen says why. 0 kg means bodyweight. A set can be marked as a warm-up. Marking a set done starts a 90 second rest.
 - A client can see stats and session history, open an assigned workout, and play each move's example video.
 - Coach and client share the same built-in video library.
 - The eight clips are short placeholders with a play control, labeled as example clips.
@@ -71,6 +71,12 @@ The week starts on Monday or Sunday. That setting is stored on the sheet. Home u
 Home shows today's workout, and Start opens the guided session. On a rest day it names the next training day in the following 21 days, after skips and moves. The week strip marks a day done when that date has a logged working set, and planned when the plan plus overrides put a workout there. A day that is both is done. Today is highlighted. Warm-up-only rows do not mark a day done.
 
 Estimated 1RM and personal records are computed from the saved sets. They are not a new stored field. The estimate uses Epley: weight × (1 + reps / 30), including a single. A set counts only when it is marked done, is not a warm-up, has a load above 0 kg, and has 1 to 12 reps. Sets above 12 reps are never used. The estimate names the set it came from (date, weight × reps). When two sets tie, the earlier one is kept: earlier date, then the session saved first, then the earlier set in that session. The other records are the heaviest weight and the most reps at a given weight. While a client logs, a set that strictly beats one of those shows a PR flag. Matching the current best does not. Home and the client sheet both link to an exercise history with the best set and the recent sessions.
+
+An assigned workout can carry a progression rule, and each move can follow that rule or use its own, including None. None leaves the next session on the last logged weight and reps. Linear adds a set amount, 2.5 kg unless the coach changes it, when every done working set hit the move's target reps. Double adds one rep at a time from the bottom of a rep range to the top, then adds that same amount of weight and starts again at the bottom. The coach can also type the next weight and reps. That override is what the client sees until it is cleared.
+
+Warm-up sets are left out of the rule. A session counts only when every working set is marked done. The load is the lightest of those sets. A miss never adds weight. After 3 stalled sessions (the coach can set 1 to 10), the next load drops by 10% of the weight that stalled, rounded to the nearest 0.5 kg, and never above that weight. A load under 5 kg can round back to itself; it then drops 0.5 kg instead. 0 kg stays bodyweight. Double progression also returns to the bottom of the range on a deload. The stall count resets after a deload or a hit. The client sees the target and a short reason, for example `+2.5 kg: all 3×5 hit last time`.
+
+A sheet that is already version 2 and has no rule fields stays on None. Saving writes the rule onto the workout. The version stays 2.
 
 ## Out of scope
 

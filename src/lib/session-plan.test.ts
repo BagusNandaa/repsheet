@@ -7,6 +7,7 @@ import {
   applyClientSetUpdate,
   buildClientSession,
   exercisePrescription,
+  exerciseTarget,
   lastExercisePrescription,
   openClientSession,
   parseLoggedReps,
@@ -76,9 +77,24 @@ const squatWorkout: Workout = {
   clientId: "client-jordan",
   name: "Strength A",
   assignedAt: "2026-10-01",
+  progression: { kind: "none" },
   moves: [
-    { id: "wm-squat", exerciseId: "ex-back-squat", sets: 4, reps: "5" },
-    { id: "wm-plank", exerciseId: "ex-plank", sets: 3, reps: "40 sec" },
+    {
+      id: "wm-squat",
+      exerciseId: "ex-back-squat",
+      sets: 4,
+      reps: "5",
+      progression: null,
+      targetOverride: null,
+    },
+    {
+      id: "wm-plank",
+      exerciseId: "ex-plank",
+      sets: 3,
+      reps: "40 sec",
+      progression: null,
+      targetOverride: null,
+    },
   ],
 };
 
@@ -227,16 +243,126 @@ test("seed history prefills Jordan's squat and falls back for the plank", () => 
     createId: () => `id-${(n += 1)}`,
   });
   const byExercise = new Map(built.exercises.map((exercise) => [exercise.exerciseId, exercise]));
-  assert.equal(byExercise.get("ex-back-squat")?.sets[0]?.weightKg, 100);
+  assert.equal(byExercise.get("ex-back-squat")?.sets[0]?.weightKg, 102.5);
   assert.equal(byExercise.get("ex-back-squat")?.sets[0]?.reps, 5);
   assert.equal(byExercise.get("ex-back-squat")?.sets.length, 4);
-  assert.equal(byExercise.get("ex-bench-press")?.sets[0]?.weightKg, 70);
+  assert.equal(byExercise.get("ex-bench-press")?.sets[0]?.weightKg, 72.5);
   assert.equal(byExercise.get("ex-bench-press")?.sets[0]?.reps, 6);
-  assert.equal(byExercise.get("ex-bent-over-row")?.sets[0]?.weightKg, 60);
+  assert.equal(byExercise.get("ex-bent-over-row")?.sets[0]?.weightKg, 62.5);
   assert.equal(byExercise.get("ex-bent-over-row")?.sets[0]?.reps, 8);
   assert.equal(byExercise.get("ex-plank")?.sets[0]?.weightKg, 0);
   assert.equal(byExercise.get("ex-plank")?.sets[0]?.reps, 40);
   assert.equal(byExercise.get("ex-plank")?.sets.length, 3);
+});
+
+test("a linear rule prefills the next load, a miss stays put, and a coach override wins", () => {
+  const history = [
+    session({
+      id: "lower",
+      clientId: "client-jordan",
+      date: "2026-09-23",
+      exerciseId: "ex-back-squat",
+      sets: [setRow("a", 100, 5), setRow("b", 100, 5), setRow("c", 100, 5)],
+    }),
+  ];
+  const linearWorkout: Workout = {
+    ...squatWorkout,
+    progression: { kind: "linear", incrementKg: 2.5, stallSessions: 3 },
+  };
+  let n = 0;
+  const built = buildClientSession({
+    clientId: "client-jordan",
+    workout: linearWorkout,
+    sessions: history,
+    date: "2026-10-21",
+    createId: () => `id-${(n += 1)}`,
+  });
+  assert.equal(built.exercises[0]?.sets[0]?.weightKg, 102.5);
+  assert.equal(built.exercises[0]?.sets[0]?.reps, 5);
+  assert.equal(
+    exerciseTarget({
+      sessions: history,
+      clientId: "client-jordan",
+      workout: linearWorkout,
+      move: linearWorkout.moves[0]!,
+    }).reason,
+    "+2.5 kg: all 3×5 hit last time",
+  );
+
+  const missed = [
+    session({
+      id: "miss",
+      clientId: "client-jordan",
+      date: "2026-09-23",
+      exerciseId: "ex-back-squat",
+      sets: [setRow("a", 100, 5), setRow("b", 100, 3)],
+    }),
+  ];
+  n = 0;
+  const held = buildClientSession({
+    clientId: "client-jordan",
+    workout: linearWorkout,
+    sessions: missed,
+    date: "2026-10-21",
+    createId: () => `id-${(n += 1)}`,
+  });
+  assert.equal(held.exercises[0]?.sets[0]?.weightKg, 100);
+  assert.equal(held.exercises[0]?.sets[0]?.reps, 5);
+
+  const overridden: Workout = {
+    ...linearWorkout,
+    moves: linearWorkout.moves.map((move, index) =>
+      index === 0 ? { ...move, targetOverride: { weightKg: 80, reps: 3 } } : move,
+    ),
+  };
+  n = 0;
+  const coachSet = buildClientSession({
+    clientId: "client-jordan",
+    workout: overridden,
+    sessions: history,
+    date: "2026-10-21",
+    createId: () => `id-${(n += 1)}`,
+  });
+  assert.equal(coachSet.exercises[0]?.sets[0]?.weightKg, 80);
+  assert.equal(coachSet.exercises[0]?.sets[0]?.reps, 3);
+  assert.equal(
+    exerciseTarget({
+      sessions: history,
+      clientId: "client-jordan",
+      workout: overridden,
+      move: overridden.moves[0]!,
+    }).reason,
+    "Coach set 80 kg × 3",
+  );
+});
+
+test("a client can mark a set as a warm-up and mark it working again", () => {
+  let n = 0;
+  const built = buildClientSession({
+    clientId: "client-jordan",
+    workout: squatWorkout,
+    sessions: [],
+    date: "2026-10-21",
+    createId: () => `id-${(n += 1)}`,
+  });
+  const setId = built.exercises[0]?.sets[0]?.id ?? "";
+  const warmed = applyClientSetUpdate([built], built.id, setId, { isWarmup: true }, "2026-10-21T12:00:00.000Z");
+  assert.equal(warmed.ok, true);
+  if (!warmed.ok) return;
+  const warmedSet = warmed.sessions[0]?.exercises[0]?.sets[0];
+  assert.equal(warmedSet?.isWarmup, true);
+  assert.equal(warmedSet?.done, false);
+  assert.equal(warmedSet?.completedAt, null);
+  const working = applyClientSetUpdate(
+    warmed.sessions,
+    built.id,
+    setId,
+    { isWarmup: false },
+    "2026-10-21T12:01:00.000Z",
+  );
+  assert.equal(working.ok, true);
+  if (!working.ok) return;
+  assert.equal(working.sessions[0]?.exercises[0]?.sets[0]?.isWarmup, false);
 });
 
 test("an open client session is resumed and a finished one is not", () => {
