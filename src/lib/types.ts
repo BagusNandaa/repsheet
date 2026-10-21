@@ -73,6 +73,37 @@ export type CoachLoggedExercise = {
 
 export const SHEET_VERSION = 2 as const;
 
+/** 0 is Sunday and 6 is Saturday, matching `Date.getDay()`. */
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/** Which day the Home week strip and the coach's week editor start on. */
+export type WeekStart = "monday" | "sunday";
+
+/**
+ * Standing week for one client.
+ * Each weekday maps to a workout id. A missing weekday is a rest day.
+ * Moving or skipping one date is a `PlanOverride`, not a change to this map.
+ */
+export type WeeklyPlan = {
+  clientId: string;
+  days: Partial<Record<Weekday, string>>;
+};
+
+/**
+ * One calendar date, leaving the standing week alone.
+ * `skip` drops that date's planned workout.
+ * `move` places that date's planned workout on `toDate` instead.
+ */
+export type PlanOverride = {
+  id: string;
+  clientId: string;
+  /** Source date, YYYY-MM-DD in the local calendar. */
+  date: string;
+  kind: "skip" | "move";
+  /** Destination date when `kind` is `move`. Null for a skip. */
+  toDate: string | null;
+};
+
 export type WorkoutMove = {
   id: string;
   exerciseId: string;
@@ -88,7 +119,11 @@ export type Workout = {
   moves: WorkoutMove[];
 };
 
-/** Browser sheet. The built-in exercise library is not stored. */
+/**
+ * Browser sheet. The built-in exercise library is not stored.
+ * Version stays 2. Older v2 blobs have no plan fields; reading them fills
+ * `plans` and `overrides` with empty lists and `weekStartsOn` with Monday.
+ */
 export type PersistedSheet = {
   version: typeof SHEET_VERSION;
   users: User[];
@@ -96,6 +131,9 @@ export type PersistedSheet = {
   measurements: Measurement[];
   sessions: Session[];
   workouts: Workout[];
+  plans: WeeklyPlan[];
+  overrides: PlanOverride[];
+  weekStartsOn: WeekStart;
 };
 
 export type Exercise = {
@@ -114,6 +152,9 @@ export type AppData = {
   measurements: Measurement[];
   sessions: Session[];
   workouts: Workout[];
+  plans: WeeklyPlan[];
+  overrides: PlanOverride[];
+  weekStartsOn: WeekStart;
   exercises: Exercise[];
 };
 

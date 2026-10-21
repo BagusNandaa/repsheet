@@ -1,11 +1,16 @@
+import { isISODate } from "./format";
 import { SHEET_VERSION } from "./types";
 import type {
   AppData,
   LoggedBy,
   PersistedSheet,
+  PlanOverride,
   Session,
   SessionExercise,
   SessionSet,
+  Weekday,
+  WeeklyPlan,
+  WeekStart,
 } from "./types";
 
 /** Previous key. One weight, one rep count, and a set count per exercise. */
@@ -147,11 +152,66 @@ function arrayOf<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+function migrateWeekStart(value: unknown): WeekStart {
+  return value === "sunday" ? "sunday" : "monday";
+}
+
+function normalizePlan(raw: unknown): WeeklyPlan | null {
+  if (!isRecord(raw)) return null;
+  const clientId = stringField(raw.clientId, "");
+  if (!clientId) return null;
+  const source = isRecord(raw.days) ? raw.days : {};
+  const days: Partial<Record<Weekday, string>> = {};
+  for (let weekday = 0; weekday <= 6; weekday += 1) {
+    const value = source[String(weekday)];
+    if (typeof value === "string" && value.length > 0) {
+      days[weekday as Weekday] = value;
+    }
+  }
+  return { clientId, days };
+}
+
+function migratePlans(raw: unknown): WeeklyPlan[] {
+  if (!Array.isArray(raw)) return [];
+  const byClient = new Map<string, WeeklyPlan>();
+  for (const item of raw) {
+    const plan = normalizePlan(item);
+    if (plan) byClient.set(plan.clientId, plan);
+  }
+  return [...byClient.values()];
+}
+
+function normalizeOverride(raw: unknown, index: number): PlanOverride | null {
+  if (!isRecord(raw)) return null;
+  const clientId = stringField(raw.clientId, "");
+  const date = stringField(raw.date, "");
+  if (!clientId || !isISODate(date)) return null;
+  const id = idField(raw.id, `override-${index + 1}`);
+  if (raw.kind === "skip") return { id, clientId, date, kind: "skip", toDate: null };
+  if (raw.kind !== "move") return null;
+  const toDate = stringField(raw.toDate, "");
+  if (!isISODate(toDate) || toDate === date) return null;
+  return { id, clientId, date, kind: "move", toDate };
+}
+
+function migrateOverrides(raw: unknown): PlanOverride[] {
+  if (!Array.isArray(raw)) return [];
+  const bySource = new Map<string, PlanOverride>();
+  raw.forEach((item, index) => {
+    const override = normalizeOverride(item, index);
+    if (!override) return;
+    bySource.set(`${override.clientId}\0${override.date}`, override);
+  });
+  return [...bySource.values()];
+}
+
 /**
  * Turn a stored sheet into version 2.
- * Pass-through entities (people, measurements, assigned workouts) are copied.
- * Only session exercises change shape. Running this on a version 2 sheet
+ * People, measurements, and assigned workouts are copied.
+ * Session exercises stay per-set rows. Running this on a version 2 sheet
  * keeps client logs, warm-ups, and completed times as stored.
+ * Week plans, single-date overrides, and the week start are kept when the
+ * sheet has them. An older v2 sheet gets an empty plan and Monday.
  */
 export function migrateSheet(raw: unknown): PersistedSheet {
   const record = isRecord(raw) ? raw : {};
@@ -163,6 +223,9 @@ export function migrateSheet(raw: unknown): PersistedSheet {
     measurements: arrayOf(record.measurements),
     sessions: sessions.map(migrateSession),
     workouts: arrayOf(record.workouts),
+    plans: migratePlans(record.plans),
+    overrides: migrateOverrides(record.overrides),
+    weekStartsOn: migrateWeekStart(record.weekStartsOn),
   };
 }
 
@@ -174,6 +237,9 @@ export function persistedSheet(data: AppData): PersistedSheet {
     measurements: data.measurements,
     sessions: data.sessions,
     workouts: data.workouts,
+    plans: data.plans,
+    overrides: data.overrides,
+    weekStartsOn: data.weekStartsOn,
   };
 }
 

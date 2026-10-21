@@ -219,6 +219,10 @@ export function createSeed(): AppData {
         coachExercise("se-8", "ex-walking-lunge", 0, 10, 3),
         coachExercise("se-9", "ex-plank", 0, 40, 3),
       ]),
+      coachSession("session-jordan-monday", "client-jordan", "2026-10-19", "Strength A", [
+        coachExercise("se-10", "ex-back-squat", 100, 5, 4),
+        coachExercise("se-11", "ex-bench-press", 70, 6, 4),
+      ]),
     ],
     workouts: [
       {
@@ -245,6 +249,26 @@ export function createSeed(): AppData {
         ],
       },
     ],
+    plans: [
+      {
+        clientId: "client-jordan",
+        days: {
+          1: "workout-jordan-a",
+          3: "workout-jordan-a",
+          5: "workout-jordan-a",
+        },
+      },
+      {
+        clientId: "client-sam",
+        days: {
+          2: "workout-sam-home",
+          4: "workout-sam-home",
+          6: "workout-sam-home",
+        },
+      },
+    ],
+    overrides: [],
+    weekStartsOn: "monday",
     exercises,
   };
 }

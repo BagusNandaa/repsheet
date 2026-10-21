@@ -1,3 +1,12 @@
+import { localISODate } from "./format";
+import {
+  addCalendarDays,
+  loggedTrainingDates,
+  plannedDatesInRange,
+  startOfWeek,
+} from "./schedule";
+import type { PlanOverride, Session, WeeklyPlan, WeekStart } from "./types";
+
 export type WeekDayStatus = "done" | "planned" | "none";
 
 export type WeekStripDay = {
@@ -6,41 +15,38 @@ export type WeekStripDay = {
   status: WeekDayStatus;
 };
 
-// Fixed sample, Monday through Sunday. Not read from sessions or a plan.
-const STUB_STATUS: WeekDayStatus[] = [
-  "done",
-  "done",
-  "planned",
-  "none",
-  "planned",
-  "none",
-  "none",
-];
-
-function isoDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function mondayOf(now: Date) {
-  const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekday = date.getDay();
-  const delta = weekday === 0 ? -6 : 1 - weekday;
-  date.setDate(date.getDate() + delta);
-  return date;
-}
-
 /**
- * Sample week for the Home strip.
- * TODO: SWE will wire this to the session model (done) and the weekly plan (planned).
+ * Seven local calendar days for Home.
+ * Done comes from a logged working set. Planned comes from the week plan
+ * plus single-date overrides. A day that is both is done. Today is not a
+ * status: the strip highlights it separately.
  */
-export function getWeekStripDays(now = new Date()): WeekStripDay[] {
-  const monday = mondayOf(now);
-  return STUB_STATUS.map((status, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    return { date: isoDate(date), status };
+export function getWeekStripDays(input: {
+  now: Date;
+  weekStartsOn: WeekStart;
+  clientId: string;
+  plan: WeeklyPlan | null;
+  overrides: readonly PlanOverride[];
+  sessions: readonly Session[];
+  knownWorkoutIds?: ReadonlySet<string>;
+}): WeekStripDay[] {
+  const start = startOfWeek(input.now, input.weekStartsOn);
+  const done = new Set(loggedTrainingDates(input.sessions, input.clientId));
+  const planned = new Set(
+    plannedDatesInRange({
+      start,
+      count: 7,
+      clientId: input.clientId,
+      plan: input.plan,
+      overrides: input.overrides,
+      knownWorkoutIds: input.knownWorkoutIds,
+    }),
+  );
+  return Array.from({ length: 7 }, (_, offset) => {
+    const iso = localISODate(addCalendarDays(start, offset));
+    let status: WeekDayStatus = "none";
+    if (planned.has(iso)) status = "planned";
+    if (done.has(iso)) status = "done";
+    return { date: iso, status };
   });
 }

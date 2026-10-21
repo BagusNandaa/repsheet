@@ -32,7 +32,8 @@ Use the browser menu to add Repsheet to the home screen, then open it from the i
 
 ## What is included
 
-- One coach can add a client, log weight and measurements, log a session, and assign a workout.
+- One coach can add a client, log weight and measurements, log a session, assign a workout, and put those workouts on a week.
+- A single date can be skipped or moved onto another date. The standing week stays as it is.
 - Clients log their own sets (decision 2026-10-21). A session stores who logged it, coach or client, and an optional link to the assigned workout.
 - Each exercise in a session is stored as one row per set: weight, reps, done, warm-up, and completed time.
 - The coach session form still takes one weight, one rep count, and a set count. Saving writes that many matching set rows.
@@ -62,6 +63,12 @@ v1 stored one weight, one rep count, and a set count on each exercise. That coun
 Per-set rows are the base for guided sessions, PRs, and progression. Warm-up rows are stored so that math can skip them. `completedAt` is the clock time a client marks a set done.
 
 The rest timer lives beside the sheet, in `repsheet.rest`. A running rest stores the wall-clock time it ends. A paused rest stores the remaining milliseconds. Reload and a sleeping tab both read that record, so the countdown is not a tick count. The session rows themselves stay in `repsheet.v2`.
+
+Each client can have a week plan: a workout id for Sunday (`0`) through Saturday (`6`). A missing weekday is a rest day. `overrides` skip one date, or move that date's planned workout onto another date. The week plan itself is unchanged. A sheet that is already version 2 and has no plan fields keeps its sessions and workouts. Missing `plans` and `overrides` become empty lists. A missing week start becomes Monday.
+
+The week starts on Monday or Sunday. That setting is stored on the sheet. Home uses it for the week strip.
+
+Home shows today's workout, and Start opens the guided session. On a rest day it names the next training day in the following 21 days, after skips and moves. The week strip marks a day done when that date has a logged working set, and planned when the plan plus overrides put a workout there. A day that is both is done. Today is highlighted. Warm-up-only rows do not mark a day done.
 
 ## Out of scope
 

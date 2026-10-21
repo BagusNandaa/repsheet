@@ -36,7 +36,7 @@ export default function NewClientPage() {
     <div className="flex flex-col gap-5">
       <BackLink href="/coach">Clients</BackLink>
       <PageIntro title="Add a client">
-        They can sign in on this device and view their sheet. They cannot change the numbers.
+        They can sign in on this device, see their sheet, and log their own sets.
       </PageIntro>
       <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
         <Field label="Name" htmlFor="name">

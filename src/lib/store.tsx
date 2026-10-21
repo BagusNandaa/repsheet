@@ -16,16 +16,21 @@ import {
   readStoredSheet,
 } from "@/lib/migrate";
 import { createSeed } from "@/lib/seed";
+import { planWorkoutId, WEEKDAYS } from "@/lib/schedule";
 import { applyClientSetUpdate, planClientSession } from "@/lib/session-plan";
 import type {
   AddClientResult,
   AppData,
   CoachLoggedExercise,
   Measurement,
+  PlanOverride,
   Result,
   SignInResult,
   StartWorkoutResult,
   User,
+  Weekday,
+  WeeklyPlan,
+  WeekStart,
   WorkoutMove,
 } from "@/lib/types";
 
@@ -69,6 +74,15 @@ type StoreValue = {
     moves: Array<Omit<WorkoutMove, "id">>;
   }) => Result;
   startClientWorkout: (workoutId: string) => StartWorkoutResult;
+  saveWeeklyPlan: (input: { clientId: string; days: Partial<Record<Weekday, string>> }) => Result;
+  setDateOverride: (input: {
+    clientId: string;
+    date: string;
+    kind: "skip" | "move";
+    toDate?: string;
+  }) => Result;
+  clearDateOverride: (input: { clientId: string; date: string }) => Result;
+  setWeekStart: (weekStartsOn: WeekStart) => Result;
   updateClientSet: (input: {
     sessionId: string;
     setId: string;
@@ -170,6 +184,24 @@ function round1(value: number) {
 function roundOptional(value: number | undefined) {
   if (value === undefined) return undefined;
   return round1(value);
+}
+
+function collectPlanDays(
+  days: Partial<Record<Weekday, string>>,
+  workouts: AppData["workouts"],
+  clientId: string,
+): { ok: true; days: WeeklyPlan["days"] } | { ok: false; error: string } {
+  const next: WeeklyPlan["days"] = {};
+  for (const weekday of WEEKDAYS) {
+    const workoutId = days[weekday];
+    if (!workoutId) continue;
+    const workout = workouts.find((item) => item.id === workoutId);
+    if (!workout || workout.clientId !== clientId) {
+      return { ok: false, error: "Choose a workout assigned to this client." };
+    }
+    next[weekday] = workoutId;
+  }
+  return { ok: true, days: next };
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -432,6 +464,105 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const saveWeeklyPlan = useCallback(
+    (input: { clientId: string; days: Partial<Record<Weekday, string>> }): Result => {
+      const current = getSnapshot();
+      const denied = coachError(currentUser(current));
+      if (denied) return { ok: false, error: denied };
+      if (!current.data.clients.some((client) => client.id === input.clientId)) {
+        return { ok: false, error: "That client is not on this sheet." };
+      }
+      const collected = collectPlanDays(input.days, current.data.workouts, input.clientId);
+      if (!collected.ok) return collected;
+      const plans = current.data.plans.filter((plan) => plan.clientId !== input.clientId);
+      plans.push({ clientId: input.clientId, days: collected.days });
+      commit({ ...current, data: { ...current.data, plans } });
+      return { ok: true };
+    },
+    [],
+  );
+
+  const setDateOverride = useCallback(
+    (input: {
+      clientId: string;
+      date: string;
+      kind: "skip" | "move";
+      toDate?: string;
+    }): Result => {
+      const current = getSnapshot();
+      const denied = coachError(currentUser(current));
+      if (denied) return { ok: false, error: denied };
+      if (!current.data.clients.some((client) => client.id === input.clientId)) {
+        return { ok: false, error: "That client is not on this sheet." };
+      }
+      if (!isISODate(input.date)) return { ok: false, error: "Choose a real date." };
+      const plan = current.data.plans.find((item) => item.clientId === input.clientId) ?? null;
+      const plannedId = planWorkoutId(plan, input.date);
+      const known = current.data.workouts.some(
+        (workout) => workout.id === plannedId && workout.clientId === input.clientId,
+      );
+      if (!plannedId || !known) {
+        return {
+          ok: false,
+          error:
+            input.kind === "move"
+              ? "That date has no workout to move."
+              : "That date is a rest day in the week plan.",
+        };
+      }
+      let toDate: string | null = null;
+      if (input.kind === "move") {
+        if (!input.toDate || !isISODate(input.toDate)) {
+          return { ok: false, error: "Choose the date to move it to." };
+        }
+        if (input.toDate === input.date) return { ok: false, error: "Pick a different date." };
+        toDate = input.toDate;
+      }
+      const existing = current.data.overrides.find(
+        (override) => override.clientId === input.clientId && override.date === input.date,
+      );
+      const next: PlanOverride = {
+        id: existing?.id ?? crypto.randomUUID(),
+        clientId: input.clientId,
+        date: input.date,
+        kind: input.kind,
+        toDate,
+      };
+      const overrides = current.data.overrides.filter(
+        (override) => !(override.clientId === input.clientId && override.date === input.date),
+      );
+      overrides.push(next);
+      commit({ ...current, data: { ...current.data, overrides } });
+      return { ok: true };
+    },
+    [],
+  );
+
+  const clearDateOverride = useCallback(
+    (input: { clientId: string; date: string }): Result => {
+      const current = getSnapshot();
+      const denied = coachError(currentUser(current));
+      if (denied) return { ok: false, error: denied };
+      const overrides = current.data.overrides.filter(
+        (override) => !(override.clientId === input.clientId && override.date === input.date),
+      );
+      if (overrides.length === current.data.overrides.length) {
+        return { ok: false, error: "That date has no exception." };
+      }
+      commit({ ...current, data: { ...current.data, overrides } });
+      return { ok: true };
+    },
+    [],
+  );
+
+  const setWeekStart = useCallback((weekStartsOn: WeekStart): Result => {
+    const current = getSnapshot();
+    if (!currentUser(current)) return { ok: false, error: "Sign in to change the week." };
+    if (current.data.weekStartsOn === weekStartsOn) return { ok: true };
+    commit({ ...current, data: { ...current.data, weekStartsOn } });
+    return { ok: true };
+  }, []);
+
   const startClientWorkout = useCallback((workoutId: string): StartWorkoutResult => {
     const current = getSnapshot();
     const user = currentUser(current);
@@ -517,6 +648,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addMeasurement,
     addSession,
     assignWorkout,
+    saveWeeklyPlan,
+    setDateOverride,
+    clearDateOverride,
+    setWeekStart,
     startClientWorkout,
     updateClientSet,
     resetDemo,
