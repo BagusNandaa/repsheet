@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { SessionCard } from "@/components/session-card";
 import { StatsBlock } from "@/components/stats-block";
 import { EmptyNote, PageIntro, actionClass } from "@/components/sheet-ui";
+import { openClientSessions, sessionProgress } from "@/lib/session-plan";
 import { useStore } from "@/lib/store";
 import { cn } from "cn";
 
@@ -22,13 +23,36 @@ export default function ClientHomePage() {
     .sort((a, b) => b.date.localeCompare(a.date));
   const latest = measurements[0];
   const firstName = user.name.split(" ")[0];
+  const openSessions = openClientSessions(data.sessions, user.clientId);
 
   return (
     <div className="flex flex-col gap-8">
       <PageIntro title={`Hello, ${firstName}`}>
-        {coach ? `${coach.name} keeps this sheet.` : "Your coach keeps this sheet."} You can look.
-        You cannot edit the numbers.
+        {coach ? `${coach.name} keeps your stats.` : "Your coach keeps your stats."} You log your
+        own sets.
       </PageIntro>
+
+      {openSessions.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-2xl">In progress</h2>
+          <ul className="flex flex-col gap-3">
+            {openSessions.map((session) => {
+              if (!session.workoutId) return null;
+              const progress = sessionProgress(session);
+              return (
+                <li key={session.id}>
+                  <Link
+                    href={`/workouts/${session.workoutId}/session`}
+                    className={cn(buttonVariants(), actionClass)}
+                  >
+                    Continue {session.title} · {progress.done} of {progress.total}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-4">
         <h2 className="font-display text-2xl">Stats</h2>

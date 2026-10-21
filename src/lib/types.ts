@@ -121,4 +121,5 @@ export type FieldError = { ok: false; error: string };
 export type Done = { ok: true };
 export type Result = Done | FieldError;
 export type AddClientResult = { ok: true; clientId: string } | FieldError;
+export type StartWorkoutResult = { ok: true; sessionId: string } | FieldError;
 export type SignInResult = { ok: true; user: User } | FieldError;

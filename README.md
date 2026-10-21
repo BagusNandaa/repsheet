@@ -36,7 +36,7 @@ Use the browser menu to add Repsheet to the home screen, then open it from the i
 - Clients log their own sets (decision 2026-10-21). A session stores who logged it, coach or client, and an optional link to the assigned workout.
 - Each exercise in a session is stored as one row per set: weight, reps, done, warm-up, and completed time.
 - The coach session form still takes one weight, one rep count, and a set count. Saving writes that many matching set rows.
-- The screen where a client ticks sets off is not in this version. The stored session is ready for it.
+- A client opens an assigned workout and logs each set. Weight and reps start from their last session for that exercise, or from the workout target when they have not logged it before. 0 kg means bodyweight. Marking a set done starts a 90 second rest.
 - A client can see stats and session history, open an assigned workout, and play each move's example video.
 - Coach and client share the same built-in video library.
 - The eight clips are short placeholders with a play control, labeled as example clips.
@@ -59,7 +59,9 @@ v1 stored one weight, one rep count, and a set count on each exercise. That coun
 - Users, clients, measurements, and assigned workouts are copied unchanged. A workout move still stores a set count and a reps string such as `8` or `40 sec`. Only logged sessions become rows.
 - A sheet that is already version 2 is not expanded again. Warm-up flags, done flags, and completed times stay as stored.
 
-Per-set rows are the base for later guided sessions, the rest timer, PRs, and progression. Warm-up rows are stored so that math can skip them. `completedAt` is where a live session will stamp the clock.
+Per-set rows are the base for guided sessions, PRs, and progression. Warm-up rows are stored so that math can skip them. `completedAt` is the clock time a client marks a set done.
+
+The rest timer lives beside the sheet, in `repsheet.rest`. A running rest stores the wall-clock time it ends. A paused rest stores the remaining milliseconds. Reload and a sleeping tab both read that record, so the countdown is not a tick count. The session rows themselves stay in `repsheet.v2`.
 
 ## Out of scope
 

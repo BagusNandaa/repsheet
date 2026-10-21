@@ -50,7 +50,7 @@ export default function AccountPage() {
       <PageIntro title="You">
         {user.role === "coach"
           ? "You can add clients, log stats and sessions, and assign workouts."
-          : "You can view your sheet and play example videos. You cannot edit numbers."}
+          : "You log your own sets. Your coach still records weight and measurements."}
       </PageIntro>
       <div className="rounded-xl bg-card px-4 py-4 ring-1 ring-foreground/10">
         <p className="font-display text-2xl">{user.name}</p>
