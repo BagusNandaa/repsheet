@@ -4,19 +4,22 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ActivityPanel } from "@/components/activity-panel";
 import { ExerciseRecordLinks } from "@/components/exercise-history";
+import { GoalForm } from "@/components/goal-form";
 import { SessionCard } from "@/components/session-card";
 import { StatsBlock } from "@/components/stats-block";
 import { BackLink, EmptyNote, actionClass } from "@/components/sheet-ui";
 import { WeekPlanEditor } from "@/components/week-plan-editor";
-import { exerciseName, formatDate } from "@/lib/format";
+import { exerciseName, formatDate, formatKg, todayISO } from "@/lib/format";
 import { useStore } from "@/lib/store";
+import { readGoalWeight } from "@/lib/weight-goal";
 import { cn } from "cn";
 
 export default function ClientSheetPage() {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { data } = useStore();
+  const { data, setGoalWeight } = useStore();
   if (!data || !id) return null;
 
   const client = data.clients.find((item) => item.id === id);
@@ -40,6 +43,8 @@ export default function ClientSheetPage() {
     .filter((item) => item.clientId === client.id)
     .sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
   const latest = measurements[0];
+  const goalKg = readGoalWeight(client);
+  const today = todayISO();
 
   return (
     <div className="flex flex-col gap-8">
@@ -59,6 +64,9 @@ export default function ClientSheetPage() {
           <a href="#stats" className="rounded-full bg-muted px-3 py-1.5 text-sm">
             Stats
           </a>
+          <a href="#training" className="rounded-full bg-muted px-3 py-1.5 text-sm">
+            Training
+          </a>
           <a href="#records" className="rounded-full bg-muted px-3 py-1.5 text-sm">
             Records
           </a>
@@ -74,10 +82,26 @@ export default function ClientSheetPage() {
       <section id="stats" className="flex flex-col gap-4">
         <h2 className="font-display text-2xl">Stats</h2>
         {latest ? (
-          <StatsBlock latest={latest} previous={measurements[1]} history={measurements} />
+          <StatsBlock
+            latest={latest}
+            previous={measurements[1]}
+            history={measurements}
+            goalKg={goalKg}
+          />
         ) : (
-          <EmptyNote>No weigh-in yet. Log weight and tape measurements to start the sheet.</EmptyNote>
+          <EmptyNote>
+            No weigh-in yet. Log weight and tape measurements to start the sheet.
+            {goalKg != null ? ` Goal is ${formatKg(goalKg)}.` : ""}
+          </EmptyNote>
         )}
+        <GoalForm
+          key={`${client.id}:${goalKg ?? "none"}`}
+          goalKg={goalKg}
+          onSave={(next) => {
+            const result = setGoalWeight({ clientId: client.id, goalWeightKg: next });
+            return result.ok ? null : result.error;
+          }}
+        />
         {measurements.length > 1 ? (
           <ul className="flex flex-col divide-y divide-border">
             {measurements.slice(0, 6).map((item) => (
@@ -98,6 +122,13 @@ export default function ClientSheetPage() {
           Log stats
         </Link>
       </section>
+
+      <ActivityPanel
+        id="training"
+        dates={sessions.map((session) => session.date)}
+        today={today}
+        weekStartsOn={data.weekStartsOn}
+      />
 
       <section id="records" className="flex flex-col gap-4">
         <h2 className="font-display text-2xl">Records</h2>

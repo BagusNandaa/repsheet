@@ -39,12 +39,16 @@ Use the browser menu to add Repsheet to the home screen, then open it from the i
 - The coach session form still takes one weight, one rep count, and a set count. Saving writes that many matching set rows.
 - A client opens an assigned workout and logs each set. With no progression rule, weight and reps start from their last session for that exercise, or from the workout target when they have not logged it before. When a rule is set, the sets start at the progression target and the screen says why. 0 kg means bodyweight. A set can be marked as a warm-up. Marking a set done starts a 90 second rest.
 - A client can see stats and session history, open an assigned workout, and play each move's example video.
+- The coach sets a body-weight goal per client. Home shows how far the latest weigh-in is from that goal. The weight chart draws the goal and colours each change by whether it moves closer or farther.
+- Home and the client sheet show a year of training days, plus consecutive weeks trained, workouts this week, and the total. Those counts use logged sessions. The week follows the sheet's week-start setting.
 - Coach and client share the same built-in video library.
 - The eight clips are short placeholders with a play control, labeled as example clips.
 
 ## Saved on this device
 
 The current sheet is `repsheet.v2` with `version: 2`. A browser that still has `repsheet.v1` is migrated the next time the app opens. `repsheet.v2` is written first, then `repsheet.v1` is removed. If both keys exist, `repsheet.v2` is the sheet. No stored key means the demo seed.
+
+`goalWeightKg` sits on the client, in kilograms. Null means no goal. A v2 sheet that omits the field still loads, and the goal is treated as unset. The sheet version stays 2. Other client fields are left as stored.
 
 v1 stored one weight, one rep count, and a set count on each exercise. That count is expanded into rows:
 
@@ -66,7 +70,7 @@ The rest timer lives beside the sheet, in `repsheet.rest`. A running rest stores
 
 Each client can have a week plan: a workout id for Sunday (`0`) through Saturday (`6`). A missing weekday is a rest day. `overrides` skip one date, or move that date's planned workout onto another date. The week plan itself is unchanged. A sheet that is already version 2 and has no plan fields keeps its sessions and workouts. Missing `plans` and `overrides` become empty lists. A missing week start becomes Monday.
 
-The week starts on Monday or Sunday. That setting is stored on the sheet. Home uses it for the week strip.
+The week starts on Monday or Sunday. That setting is stored on the sheet. Home uses it for the week strip, the training heatmap, and streaks.
 
 Home shows today's workout, and Start opens the guided session. On a rest day it names the next training day in the following 21 days, after skips and moves. The week strip marks a day done when that date has a logged working set, and planned when the plan plus overrides put a workout there. A day that is both is done. Today is highlighted. Warm-up-only rows do not mark a day done.
 
@@ -83,7 +87,7 @@ A sheet that is already version 2 and has no rule fields stays on None. Saving w
 
 On **You**, download a JSON file of every `repsheet.*` value in this browser, or restore one. The file has `schemaVersion` and `exportedAt`. `schemaVersion` 1 is the current envelope. A file that is still a raw v1 or v2 sheet, with no envelope, is an older backup. Import runs the same v1-to-v2 migration the app uses on startup, then checks the result.
 
-Known fields are checked against the current sheet. Extra fields and extra `repsheet.*` keys are kept, so a later weekly plan, e1RM, or progression rule can round-trip without a change to this backup. A file that breaks a known field, or that was written by a newer backup envelope, is refused and does not change this device.
+Known fields are checked against the current sheet, including a client's `goalWeightKg`. Extra fields and extra `repsheet.*` keys are kept, so a later weekly plan, e1RM, or progression rule can round-trip without a change to this backup. A file that breaks a known field, or that was written by a newer backup envelope, is refused and does not change this device.
 
 Merge matches any list of records by `id`, including lists this version does not know about. The record in the file replaces the record on the device with that id. Nested rows, such as sets and workout moves, stay inside that record and are not matched on their own. Records only on the device stay. Records only in the file are added. Merging the same file again changes nothing. Other values in the file replace the device value for that key. Keys only on the device stay. Merge does not change who is signed in when this device already has someone signed in.
 

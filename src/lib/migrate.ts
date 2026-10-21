@@ -3,6 +3,7 @@ import { readProgressionRule, readTargetOverride } from "./progression";
 import { SHEET_VERSION } from "./types";
 import type {
   AppData,
+  Client,
   LoggedBy,
   PersistedSheet,
   PlanOverride,
@@ -15,6 +16,7 @@ import type {
   Workout,
   WorkoutMove,
 } from "./types";
+import { normalizeGoal } from "./weight-goal";
 
 /** Previous key. One weight, one rep count, and a set count per exercise. */
 export const STORAGE_KEY_V1 = "repsheet.v1";
@@ -242,10 +244,24 @@ function migrateOverrides(raw: unknown): PlanOverride[] {
 }
 
 /**
+ * Keep every stored client field. A missing or invalid `goalWeightKg` becomes
+ * null so an older v2 sheet still loads and the chart has a safe default.
+ */
+function migrateClients(raw: unknown): Client[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    return [{ ...item, goalWeightKg: normalizeGoal(item.goalWeightKg) } as Client];
+  });
+}
+
+/**
  * Turn a stored sheet into version 2.
  * People, measurements, and assigned workouts are copied.
  * Session exercises stay per-set rows. Running this on a version 2 sheet
  * keeps client logs, warm-ups, and completed times as stored.
+ * A client goal is kept when it is a kilogram value from 1 to 400.
+ * Anything else, including a sheet that never had the field, becomes null.
  * Week plans, single-date overrides, and the week start are kept when the
  * sheet has them. An older v2 sheet gets an empty plan and Monday.
  * A workout with no progression rule becomes None. A move with no rule
@@ -257,7 +273,7 @@ export function migrateSheet(raw: unknown): PersistedSheet {
   return {
     version: SHEET_VERSION,
     users: arrayOf(record.users),
-    clients: arrayOf(record.clients),
+    clients: migrateClients(record.clients),
     measurements: arrayOf(record.measurements),
     sessions: sessions.map(migrateSession),
     workouts: migrateWorkouts(record.workouts),

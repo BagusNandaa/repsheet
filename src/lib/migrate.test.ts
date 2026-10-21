@@ -112,7 +112,10 @@ test("migrates a v1 session into per-set rows without dropping other sheet data"
   assert.equal(session.workoutId, null);
   assert.equal(session.title, "Lower body");
   assert.deepEqual(migrated.users, legacy.users);
-  assert.deepEqual(migrated.clients, legacy.clients);
+  assert.deepEqual(
+    migrated.clients,
+    legacy.clients.map((client) => ({ ...client, goalWeightKg: null })),
+  );
   assert.deepEqual(migrated.measurements, legacy.measurements);
   assert.deepEqual(migrated.workouts, [
     {
@@ -448,11 +451,51 @@ test("seed sessions are per-set rows and survive another migrate", () => {
   assert.deepEqual(once.sessions, seed.sessions);
   assert.deepEqual(twice.sessions, once.sessions);
   assert.deepEqual(once.users, seed.users);
+  assert.deepEqual(once.clients, seed.clients);
+  assert.equal(once.clients[0]?.goalWeightKg, 70);
   assert.deepEqual(once.workouts, seed.workouts);
   assert.deepEqual(once.plans, seed.plans);
   assert.deepEqual(once.overrides, seed.overrides);
   assert.equal(once.weekStartsOn, seed.weekStartsOn);
   assert.equal(twice.weekStartsOn, "monday");
+});
+
+test("a v2 sheet keeps a valid goal and treats a missing or invalid goal as none", () => {
+  const storage = memoryStorage({
+    [STORAGE_KEY_V2]: JSON.stringify({
+      version: SHEET_VERSION,
+      users: [{ id: "user-alex" }],
+      measurements: [],
+      sessions: [],
+      workouts: [],
+      clients: [
+        { id: "a", name: "A", email: "a@b.co", userId: "u", createdAt: "2026-01-01" },
+        {
+          id: "b",
+          name: "B",
+          email: "b@b.co",
+          userId: "u2",
+          createdAt: "2026-01-01",
+          goalWeightKg: 70.5,
+          nickname: "Bee",
+        },
+        { id: "c", name: "C", email: "c@b.co", userId: "u3", createdAt: "2026-01-01", goalWeightKg: "70" },
+        { id: "d", name: "D", email: "d@b.co", userId: "u4", createdAt: "2026-01-01", goalWeightKg: 0 },
+        { id: "e", name: "E", email: "e@b.co", userId: "u5", createdAt: "2026-01-01", goalWeightKg: 401 },
+      ],
+    }),
+  });
+  const sheet = readStoredSheet(storage);
+  assert.equal(sheet?.version, SHEET_VERSION);
+  assert.equal(sheet?.clients[0]?.goalWeightKg, null);
+  assert.equal(sheet?.clients[1]?.goalWeightKg, 70.5);
+  assert.equal(sheet?.clients[1]?.name, "B");
+  assert.equal((sheet?.clients[1] as { nickname?: string } | undefined)?.nickname, "Bee");
+  assert.equal(sheet?.clients[2]?.goalWeightKg, null);
+  assert.equal(sheet?.clients[3]?.goalWeightKg, null);
+  assert.equal(sheet?.clients[4]?.goalWeightKg, null);
+  assert.equal(migrateSheet(sheet).clients[1]?.goalWeightKg, 70.5);
+  assert.equal(storage.getItem(STORAGE_KEY_V1), null);
 });
 
 test("a coach card still prints mixed set rows", () => {

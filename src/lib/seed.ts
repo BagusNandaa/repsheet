@@ -142,6 +142,7 @@ export function createSeed(): AppData {
         email: "jordan@repsheet.app",
         userId: "user-jordan",
         createdAt: "2026-08-12",
+        goalWeightKg: 70,
       },
       {
         id: "client-sam",
@@ -149,6 +150,7 @@ export function createSeed(): AppData {
         email: "sam@repsheet.app",
         userId: "user-sam",
         createdAt: "2026-09-10",
+        goalWeightKg: 78,
       },
     ],
     measurements: [
@@ -179,6 +181,16 @@ export function createSeed(): AppData {
         weightKg: 72.8,
         chestCm: 99,
         waistCm: 81,
+        hipsCm: 98,
+        thighCm: 57,
+      },
+      {
+        id: "m-jordan-4",
+        clientId: "client-jordan",
+        date: "2026-10-07",
+        weightKg: 73.4,
+        chestCm: 99,
+        waistCm: 82,
         hipsCm: 98,
         thighCm: 57,
       },
@@ -219,6 +231,18 @@ export function createSeed(): AppData {
         coachExercise("se-8", "ex-walking-lunge", 0, 10, 3),
         coachExercise("se-9", "ex-plank", 0, 40, 3),
       ]),
+      ...([
+        ["session-jordan-aug-13", "2026-08-13", 90],
+        ["session-jordan-aug-20", "2026-08-20", 90],
+        ["session-jordan-oct-06", "2026-10-06", 100],
+        ["session-jordan-oct-13", "2026-10-13", 100],
+        ["session-jordan-oct-20", "2026-10-20", 100],
+        ["session-jordan-oct-21", "2026-10-21", 100],
+      ] as const satisfies ReadonlyArray<readonly [string, string, number]>).map(([id, date, weight]) =>
+        coachSession(id, "client-jordan", date, "Strength", [
+          coachExercise(id, "ex-back-squat", weight, 5, 3),
+        ]),
+      ),
       coachSession("session-jordan-monday", "client-jordan", "2026-10-19", "Strength A", [
         coachExercise("se-10", "ex-back-squat", 100, 5, 4),
         coachExercise("se-11", "ex-bench-press", 70, 6, 4),

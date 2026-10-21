@@ -15,6 +15,11 @@ export type Client = {
   email: string;
   userId: string;
   createdAt: string;
+  /**
+   * Body-weight goal in kilograms. Null when the coach has not set one.
+   * Older v2 sheets omit the field; reading them fills null. Version stays 2.
+   */
+  goalWeightKg: number | null;
 };
 
 export type Measurement = {

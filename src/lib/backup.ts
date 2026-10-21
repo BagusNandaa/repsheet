@@ -119,6 +119,7 @@ const clientSchema = z.looseObject({
   email: z.string(),
   userId: z.string(),
   createdAt: z.string(),
+  goalWeightKg: z.number().finite().gte(1).lte(400).nullable().optional(),
 });
 
 const measurementSchema = z.looseObject({

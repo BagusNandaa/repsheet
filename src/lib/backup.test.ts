@@ -569,3 +569,63 @@ test("a usable v2 backup keeps a leftover v1 key", () => {
   assert.equal(decodedSheet(storage).version, SHEET_VERSION);
   assert.equal((decodedSheet(storage).sessions as unknown[]).length, sheet().sessions.length);
 });
+
+test("a client goal weight survives a backup round trip", () => {
+  const stored = sheet();
+  const goals = (clients: Array<{ id: string; goalWeightKg?: number | null }>) =>
+    Object.fromEntries(clients.map((item) => [item.id, item.goalWeightKg]));
+  assert.deepEqual(goals(stored.clients), {
+    "client-jordan": 70,
+    "client-sam": 78,
+  });
+
+  const storage = memoryStorage({ [STORAGE_KEY_V2]: JSON.stringify(stored) });
+  const empty = memoryStorage();
+  const written = restoreBackup(empty, serializeBackup(exportBackup(storage, NOW)), "replace");
+  assert.equal(written.ok, true);
+  assert.deepEqual(
+    goals(decodedSheet(empty).clients as Array<{ id: string; goalWeightKg?: number | null }>),
+    { "client-jordan": 70, "client-sam": 78 },
+  );
+
+  const cleared = {
+    ...stored,
+    clients: stored.clients.map((item) =>
+      item.id === "client-jordan" ? { ...item, goalWeightKg: null } : item,
+    ),
+  };
+  const prepared = prepareImport(envelope({ [STORAGE_KEY_V2]: cleared }));
+  assert.equal(prepared.ok, true);
+  if (!prepared.ok) return;
+  const imported = prepared.backup.keys[STORAGE_KEY_V2] as {
+    clients: Array<{ id: string; goalWeightKg?: number | null }>;
+  };
+  assert.deepEqual(goals(imported.clients), {
+    "client-jordan": null,
+    "client-sam": 78,
+  });
+
+  const rejected = prepareImport(
+    envelope({
+      [STORAGE_KEY_V2]: {
+        ...stored,
+        clients: stored.clients.map((item) =>
+          item.id === "client-jordan" ? { ...item, goalWeightKg: "70" } : item,
+        ),
+      },
+    }),
+  );
+  assert.equal(rejected.ok, false);
+
+  const outOfRange = prepareImport(
+    envelope({
+      [STORAGE_KEY_V2]: {
+        ...stored,
+        clients: stored.clients.map((item) =>
+          item.id === "client-jordan" ? { ...item, goalWeightKg: 500 } : item,
+        ),
+      },
+    }),
+  );
+  assert.equal(outOfRange.ok, false);
+});

@@ -1,6 +1,13 @@
 import { WeightTrend } from "@/components/weight-trend";
 import { formatDate, formatKg, formatWeightChange } from "@/lib/format";
 import type { Measurement } from "@/lib/types";
+import { formatGoalDistance, goalDirection, type GoalDirection } from "@/lib/weight-goal";
+
+const directionLabel: Record<GoalDirection, string> = {
+  toward: "toward the goal",
+  away: "away from the goal",
+  flat: "same distance from the goal",
+};
 
 const tapes = [
   ["Chest", "chestCm"],
@@ -13,11 +20,16 @@ export function StatsBlock({
   latest,
   previous,
   history,
+  goalKg = null,
 }: {
   latest: Measurement;
   previous?: Measurement;
   history: Measurement[];
+  goalKg?: number | null;
 }) {
+  const direction =
+    previous && goalKg != null ? goalDirection(previous.weightKg, latest.weightKg, goalKg) : null;
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -29,9 +41,35 @@ export function StatsBlock({
           <p className="mt-1 text-sm text-muted-foreground">
             {formatWeightChange(latest.weightKg, previous.weightKg)} since{" "}
             {formatDate(previous.date)}
+            {direction ? (
+              <>
+                , <span className={`goal-${direction}`}>{directionLabel[direction]}</span>
+              </>
+            ) : null}
           </p>
         ) : null}
-        <WeightTrend points={history.map((item) => ({ date: item.date, weightKg: item.weightKg }))} />
+        {goalKg != null ? (
+          <p className="mt-1 text-sm tabular-nums text-muted-foreground">
+            {formatGoalDistance(latest.weightKg, goalKg)}
+          </p>
+        ) : null}
+        <WeightTrend
+          points={history.map((item) => ({ date: item.date, weightKg: item.weightKg }))}
+          goalKg={goalKg}
+        />
+        {goalKg != null ? (
+          <p className="goal-key">
+            <span>
+              <span className="goal-swatch toward" aria-hidden /> Toward goal
+            </span>
+            <span>
+              <span className="goal-swatch away" aria-hidden /> Away from goal
+            </span>
+            <span>
+              <span className="goal-swatch goal" aria-hidden /> Goal
+            </span>
+          </p>
+        ) : null}
       </div>
       <dl className="grid grid-cols-2 gap-2">
         {tapes.map(([label, key]) => {
