@@ -209,10 +209,12 @@
 }
 
 .dark .app-header {
+  /* The blur utility owns backdrop-filter and composes it from these
+     variables. Putting the whole list in the blur variable keeps
+     saturate(180%) blur(20px) and beats backdrop-blur-sm's 8px blur. */
+  --tw-backdrop-blur: saturate(180%) blur(20px);
   background-color: rgba(0, 0, 0, 0.68);
   border-bottom-color: var(--hair-soft);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 .dark .group\/button {
