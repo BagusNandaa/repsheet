@@ -1,4 +1,37 @@
-import type { AppData, Exercise } from "@/lib/types";
+import { expandUniformSets } from "./migrate";
+import type { AppData, Exercise, Session, SessionExercise } from "@/lib/types";
+
+function coachExercise(
+  id: string,
+  exerciseId: string,
+  weightKg: number,
+  reps: number,
+  sets: number,
+): SessionExercise {
+  return {
+    id,
+    exerciseId,
+    sets: expandUniformSets(sets, weightKg, reps, (index) => `${id}-set-${index + 1}`),
+  };
+}
+
+function coachSession(
+  id: string,
+  clientId: string,
+  date: string,
+  title: string,
+  exercises: SessionExercise[],
+): Session {
+  return {
+    id,
+    clientId,
+    date,
+    title,
+    loggedBy: "coach",
+    workoutId: null,
+    exercises,
+  };
+}
 
 const exercises: Exercise[] = [
   {
@@ -171,93 +204,21 @@ export function createSeed(): AppData {
       },
     ],
     sessions: [
-      {
-        id: "session-jordan-lower",
-        clientId: "client-jordan",
-        date: "2026-09-23",
-        title: "Lower body",
-        exercises: [
-          {
-            id: "se-1",
-            exerciseId: "ex-back-squat",
-            weightKg: 100,
-            reps: 5,
-            sets: 3,
-          },
-          {
-            id: "se-2",
-            exerciseId: "ex-romanian-deadlift",
-            weightKg: 80,
-            reps: 8,
-            sets: 3,
-          },
-          {
-            id: "se-3",
-            exerciseId: "ex-walking-lunge",
-            weightKg: 16,
-            reps: 10,
-            sets: 3,
-          },
-        ],
-      },
-      {
-        id: "session-jordan-upper",
-        clientId: "client-jordan",
-        date: "2026-09-30",
-        title: "Upper body",
-        exercises: [
-          {
-            id: "se-4",
-            exerciseId: "ex-bench-press",
-            weightKg: 70,
-            reps: 6,
-            sets: 4,
-          },
-          {
-            id: "se-5",
-            exerciseId: "ex-bent-over-row",
-            weightKg: 60,
-            reps: 8,
-            sets: 3,
-          },
-          {
-            id: "se-6",
-            exerciseId: "ex-overhead-press",
-            weightKg: 40,
-            reps: 8,
-            sets: 3,
-          },
-        ],
-      },
-      {
-        id: "session-sam-home",
-        clientId: "client-sam",
-        date: "2026-09-28",
-        title: "Home circuit",
-        exercises: [
-          {
-            id: "se-7",
-            exerciseId: "ex-push-up",
-            weightKg: 0,
-            reps: 12,
-            sets: 3,
-          },
-          {
-            id: "se-8",
-            exerciseId: "ex-walking-lunge",
-            weightKg: 0,
-            reps: 10,
-            sets: 3,
-          },
-          {
-            id: "se-9",
-            exerciseId: "ex-plank",
-            weightKg: 0,
-            reps: 40,
-            sets: 3,
-          },
-        ],
-      },
+      coachSession("session-jordan-lower", "client-jordan", "2026-09-23", "Lower body", [
+        coachExercise("se-1", "ex-back-squat", 100, 5, 3),
+        coachExercise("se-2", "ex-romanian-deadlift", 80, 8, 3),
+        coachExercise("se-3", "ex-walking-lunge", 16, 10, 3),
+      ]),
+      coachSession("session-jordan-upper", "client-jordan", "2026-09-30", "Upper body", [
+        coachExercise("se-4", "ex-bench-press", 70, 6, 4),
+        coachExercise("se-5", "ex-bent-over-row", 60, 8, 3),
+        coachExercise("se-6", "ex-overhead-press", 40, 8, 3),
+      ]),
+      coachSession("session-sam-home", "client-sam", "2026-09-28", "Home circuit", [
+        coachExercise("se-7", "ex-push-up", 0, 12, 3),
+        coachExercise("se-8", "ex-walking-lunge", 0, 10, 3),
+        coachExercise("se-9", "ex-plank", 0, 40, 3),
+      ]),
     ],
     workouts: [
       {
