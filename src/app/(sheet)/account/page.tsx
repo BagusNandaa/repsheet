@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BackupControls } from "@/components/backup-controls";
 import { PageIntro, actionClass } from "@/components/sheet-ui";
 import { useStore } from "@/lib/store";
 
@@ -58,6 +59,8 @@ export default function AccountPage() {
           {user.role === "coach" ? "Coach" : "Client"} · {user.email}
         </p>
       </div>
+
+      <BackupControls />
 
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-2xl">Home screen</h2>

@@ -63,6 +63,16 @@ Per-set rows are the base for guided sessions, PRs, and progression. Warm-up row
 
 The rest timer lives beside the sheet, in `repsheet.rest`. A running rest stores the wall-clock time it ends. A paused rest stores the remaining milliseconds. Reload and a sleeping tab both read that record, so the countdown is not a tick count. The session rows themselves stay in `repsheet.v2`.
 
+## Backup
+
+On **You**, download a JSON file of every `repsheet.*` value in this browser, or restore one. The file has `schemaVersion` and `exportedAt`. `schemaVersion` 1 is the current envelope. A file that is still a raw v1 or v2 sheet, with no envelope, is an older backup. Import runs the same v1-to-v2 migration the app uses on startup, then checks the result.
+
+Known fields are checked against the current sheet. Extra fields and extra `repsheet.*` keys are kept, so a later weekly plan, e1RM, or progression rule can round-trip without a change to this backup. A file that breaks a known field, or that was written by a newer backup envelope, is refused and does not change this device.
+
+Merge matches any list of records by `id`, including lists this version does not know about. The record in the file replaces the record on the device with that id. Nested rows, such as sets and workout moves, stay inside that record and are not matched on their own. Records only on the device stay. Records only in the file are added. Merging the same file again changes nothing. Other values in the file replace the device value for that key. Keys only on the device stay. Merge does not change who is signed in when this device already has someone signed in.
+
+Replace makes this device's `repsheet.*` keys match the file after migration. Keys that are not in the file are removed.
+
 ## Out of scope
 
 Coach-uploaded clips, YouTube links, payments, a native app, and deployment.

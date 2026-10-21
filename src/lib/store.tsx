@@ -10,6 +10,7 @@ import {
 } from "react";
 import { isISODate, todayISO } from "@/lib/format";
 import {
+  SESSION_KEY,
   STORAGE_KEY_V2,
   expandUniformSets,
   persistedSheet,
@@ -28,8 +29,6 @@ import type {
   User,
   WorkoutMove,
 } from "@/lib/types";
-
-const SESSION_KEY = "repsheet.user";
 
 type Snapshot = {
   ready: boolean;
