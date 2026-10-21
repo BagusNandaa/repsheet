@@ -1,12 +1,6 @@
-import { isISODate } from "./format";
-
-/**
- * Monday. `Date.getDay()` uses 0 for Sunday.
- * This sheet has no week-start setting. Pass `weekStartsOn` if one is added.
- */
-export const MONDAY = 1 as const;
-
-export type WeekStartsOn = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+import { isISODate, localISODate } from "./format";
+import { addCalendarDays, startOfWeek, weekdayOrder } from "./schedule";
+import type { WeekStart } from "./types";
 
 /** GitHub-style trailing year: 53 week columns ending with the current week. */
 export const HEATMAP_WEEKS = 53;
@@ -39,29 +33,18 @@ export type YearHeatmap = {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function formatLocal(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function calendarDate(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, (month ?? 1) - 1, day ?? 1);
 }
 
-/**
- * Move a calendar date by whole local days.
- * Constructing `new Date(year, month, day + n)` follows the local calendar,
- * including a 23-hour or 25-hour daylight-saving day. Adding 86_400_000 ms does not.
- */
-export function shiftISODate(iso: string, days: number) {
-  const [year, month, day] = iso.split("-").map(Number);
-  return formatLocal(new Date(year, month - 1, day + days));
+/** Local calendar step. Week boundaries come from `startOfWeek`, not a second copy. */
+function shiftISODate(iso: string, days: number) {
+  return localISODate(addCalendarDays(calendarDate(iso), days));
 }
 
-/** Local week start for a YYYY-MM-DD calendar date. */
-export function weekStartISO(iso: string, weekStartsOn: WeekStartsOn = MONDAY) {
-  const [year, month, day] = iso.split("-").map(Number);
-  const weekday = new Date(year, month - 1, day).getDay();
-  const delta = (weekday - weekStartsOn + 7) % 7;
-  return shiftISODate(iso, -delta);
+function weekStartISO(iso: string, weekStartsOn: WeekStart) {
+  return localISODate(startOfWeek(calendarDate(iso), weekStartsOn));
 }
 
 /**
@@ -94,7 +77,7 @@ export function heatmapLevel(count: number): HeatmapLevel {
 export function trainingStreaks(
   dates: readonly string[],
   today: string,
-  weekStartsOn: WeekStartsOn = MONDAY,
+  weekStartsOn: WeekStart = "monday",
 ): StreakSummary {
   const empty: StreakSummary = { consecutiveWeeks: 0, workoutsThisWeek: 0, totalWorkouts: 0 };
   if (!isISODate(today)) return empty;
@@ -126,7 +109,7 @@ export function trainingStreaks(
 export function yearHeatmap(
   dates: readonly string[],
   today: string,
-  weekStartsOn: WeekStartsOn = MONDAY,
+  weekStartsOn: WeekStart = "monday",
 ): YearHeatmap {
   if (!isISODate(today)) return { start: "", end: "", weeks: [] };
 
@@ -149,14 +132,13 @@ export function yearHeatmap(
   return { start, end: shiftISODate(endWeek, 6), weeks };
 }
 
-const WEEKDAY_ROWS = ["M", "", "W", "", "F", "", ""] as const;
+const WEEKDAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
-/** One letter for the first, middle, and last weekday row. The rest stay blank. */
-export function heatmapWeekdayLabels(weekStartsOn: WeekStartsOn = MONDAY) {
-  const names = ["S", "M", "T", "W", "T", "F", "S"];
-  return WEEKDAY_ROWS.map((label, index) => {
-    if (!label) return "";
-    return names[(weekStartsOn + index) % 7] ?? "";
+/** One letter on the first, third, and fifth row. Order follows the sheet's week start. */
+export function heatmapWeekdayLabels(weekStartsOn: WeekStart = "monday") {
+  return weekdayOrder(weekStartsOn).map((weekday, index) => {
+    if (index % 2 !== 0 || index > 4) return "";
+    return WEEKDAY_LETTERS[weekday] ?? "";
   });
 }
 

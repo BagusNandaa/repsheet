@@ -12,19 +12,36 @@ import {
   FormError,
   PageIntro,
   actionClass,
+  controlClass,
   inputClass,
 } from "@/components/sheet-ui";
+import { ProgressionFields, blankRuleDraft, parseRuleDraft, type RuleDraft } from "@/components/progression-editor";
 import { useStore } from "@/lib/store";
+import type { ProgressionRule } from "@/lib/types";
+
+type MoveChoice = "inherit" | "none" | "linear" | "double";
 
 type Draft = {
   key: string;
   exerciseId: string;
   sets: string;
   reps: string;
+  rule: MoveChoice;
 };
 
+function moveProgression(choice: MoveChoice, workoutRule: ProgressionRule): ProgressionRule | null {
+  if (choice === "inherit") return null;
+  if (choice === "none") return { kind: "none" };
+  if (choice === "linear") {
+    if (workoutRule.kind === "linear") return workoutRule;
+    return { kind: "linear", incrementKg: 2.5, stallSessions: 3 };
+  }
+  if (workoutRule.kind === "double") return workoutRule;
+  return { kind: "double", incrementKg: 2.5, stallSessions: 3, repMin: 8, repMax: 12 };
+}
+
 function blankDraft(): Draft {
-  return { key: crypto.randomUUID(), exerciseId: "", sets: "", reps: "" };
+  return { key: crypto.randomUUID(), exerciseId: "", sets: "", reps: "", rule: "inherit" };
 }
 
 export default function AssignWorkoutPage() {
@@ -33,6 +50,7 @@ export default function AssignWorkoutPage() {
   const { data, assignWorkout } = useStore();
   const router = useRouter();
   const [name, setName] = useState("");
+  const [rule, setRule] = useState<RuleDraft>(blankRuleDraft);
   const [rows, setRows] = useState<Draft[]>([blankDraft()]);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,13 +73,20 @@ export default function AssignWorkoutPage() {
     event.preventDefault();
     if (!id) return;
     const filled = rows.filter((row) => row.exerciseId || row.sets || row.reps);
+    const progression = parseRuleDraft(rule);
+    if (!progression.ok) {
+      setError(progression.error);
+      return;
+    }
     const result = assignWorkout({
       clientId: id,
       name,
+      progression: progression.rule,
       moves: filled.map((row) => ({
         exerciseId: row.exerciseId,
         sets: Number(row.sets.trim()),
         reps: row.reps,
+        progression: moveProgression(row.rule, progression.rule),
       })),
     });
     if (!result.ok) {
@@ -75,7 +100,7 @@ export default function AssignWorkoutPage() {
     <div className="flex flex-col gap-5">
       <BackLink href={`/coach/clients/${client.id}`}>{client.name}</BackLink>
       <PageIntro title="Assign a workout">
-        Each move uses the built-in example video. {client.name} can play it, and cannot edit the plan.
+        Each move uses the built-in example video. {client.name} logs the sets. Pick how the weight should climb.
       </PageIntro>
       <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
         <Field label="Workout name" htmlFor="workout-name" hint="For example, Strength A.">
@@ -86,6 +111,14 @@ export default function AssignWorkoutPage() {
             className={inputClass}
           />
         </Field>
+        <fieldset className="flex flex-col gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
+          <legend className="px-1 text-sm font-medium">Progression</legend>
+          <ProgressionFields idPrefix="assign" value={rule} onChange={setRule} />
+          <p className="text-sm leading-5 text-muted-foreground">
+            A miss never adds weight. After the stalled-session count, the load drops 10%, rounded to the nearest 0.5 kg.
+            Open the workout later to change one move or type the next target.
+          </p>
+        </fieldset>
         <div className="flex flex-col gap-3">
           {rows.map((row, index) => {
             const chosen = data.exercises.find((exercise) => exercise.id === row.exerciseId);
@@ -105,6 +138,19 @@ export default function AssignWorkoutPage() {
                     Example video included for {chosen.name}.
                   </p>
                 ) : null}
+                <Field label="Progression" htmlFor={`wrule-${row.key}`}>
+                  <select
+                    id={`wrule-${row.key}`}
+                    value={row.rule}
+                    onChange={(event) => update(row.key, { rule: event.target.value as MoveChoice })}
+                    className={controlClass}
+                  >
+                    <option value="inherit">Same as workout</option>
+                    <option value="none">None</option>
+                    <option value="linear">Linear</option>
+                    <option value="double">Double</option>
+                  </select>
+                </Field>
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Sets" htmlFor={`wsets-${row.key}`}>
                     <Input

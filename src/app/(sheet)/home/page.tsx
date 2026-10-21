@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { ActivityPanel } from "@/components/activity-panel";
+import { ExerciseRecordLinks } from "@/components/exercise-history";
 import { SessionCard } from "@/components/session-card";
 import { StatsBlock } from "@/components/stats-block";
+import { TodayCard } from "@/components/today-card";
 import { WeekStrip } from "@/components/week-strip";
 import { EmptyNote, PageIntro, actionClass } from "@/components/sheet-ui";
-import { formatKg, todayISO } from "@/lib/format";
-import { openClientSessions, sessionProgress } from "@/lib/session-plan";
+import { formatKg } from "@/lib/format";
+import { trainingAgenda } from "@/lib/schedule";
+import { openClientSession, openClientSessions, sessionProgress } from "@/lib/session-plan";
 import { useStore } from "@/lib/store";
 import { getWeekStripDays } from "@/lib/week-strip";
 import { readGoalWeight } from "@/lib/weight-goal";
@@ -30,7 +33,34 @@ export default function ClientHomePage() {
   const firstName = user.name.split(" ")[0];
   const openSessions = openClientSessions(data.sessions, user.clientId);
   const goalKg = readGoalWeight(client);
-  const today = todayISO();
+  const plan = data.plans.find((item) => item.clientId === user.clientId) ?? null;
+  const overrides = data.overrides.filter((item) => item.clientId === user.clientId);
+  const knownWorkoutIds = new Set(
+    data.workouts.filter((item) => item.clientId === user.clientId).map((item) => item.id),
+  );
+  const now = new Date();
+  const agenda = trainingAgenda({
+    now,
+    clientId: user.clientId,
+    plan,
+    overrides,
+    knownWorkoutIds,
+  });
+  const todayWorkout = agenda.workoutId
+    ? (data.workouts.find((item) => item.id === agenda.workoutId) ?? null)
+    : null;
+  const nextWorkout = agenda.next
+    ? (data.workouts.find((item) => item.id === agenda.next?.workoutId) ?? null)
+    : null;
+  const week = getWeekStripDays({
+    now,
+    weekStartsOn: data.weekStartsOn,
+    clientId: user.clientId,
+    plan,
+    overrides,
+    sessions: data.sessions,
+    knownWorkoutIds,
+  });
 
   return (
     <div className="flex flex-col gap-8">
@@ -61,9 +91,22 @@ export default function ClientHomePage() {
         </section>
       ) : null}
 
-      <WeekStrip days={getWeekStripDays()} today={today} />
+      <TodayCard
+        agenda={agenda}
+        workout={todayWorkout}
+        nextWorkout={nextWorkout}
+        inProgress={Boolean(
+          todayWorkout && openClientSession(data.sessions, user.clientId, todayWorkout.id),
+        )}
+      />
 
-      <ActivityPanel dates={sessions.map((session) => session.date)} today={today} />
+      <WeekStrip days={week} today={agenda.today} />
+
+      <ActivityPanel
+        dates={sessions.map((session) => session.date)}
+        today={agenda.today}
+        weekStartsOn={data.weekStartsOn}
+      />
 
       <section className="flex flex-col gap-4">
         <h2 className="font-display text-2xl">Stats</h2>
@@ -81,6 +124,16 @@ export default function ClientHomePage() {
             {goalKg != null ? ` Goal is ${formatKg(goalKg)}.` : ""}
           </EmptyNote>
         )}
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="font-display text-2xl">Records</h2>
+        <ExerciseRecordLinks
+          exercises={data.exercises}
+          sessions={data.sessions}
+          clientId={user.clientId}
+          hrefFor={(exerciseId) => `/exercises/${exerciseId}`}
+        />
       </section>
 
       <section className="flex flex-col gap-4">

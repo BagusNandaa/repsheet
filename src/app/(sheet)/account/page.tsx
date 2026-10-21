@@ -11,13 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BackupControls } from "@/components/backup-controls";
 import { PageIntro, actionClass } from "@/components/sheet-ui";
 import { useStore } from "@/lib/store";
 
 type InstallPrompt = Event & { prompt: () => Promise<void> };
 
 export default function AccountPage() {
-  const { user, signOut, resetDemo } = useStore();
+  const { user, data, signOut, resetDemo, setWeekStart } = useStore();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -49,7 +50,7 @@ export default function AccountPage() {
     <div className="flex flex-col gap-6">
       <PageIntro title="You">
         {user.role === "coach"
-          ? "You can add clients, log stats and sessions, and assign workouts."
+          ? "You can add clients, log stats and sessions, assign workouts, and set the week."
           : "You log your own sets. Your coach still records weight and measurements."}
       </PageIntro>
       <div className="rounded-xl bg-card px-4 py-4 ring-1 ring-foreground/10">
@@ -58,6 +59,41 @@ export default function AccountPage() {
           {user.role === "coach" ? "Coach" : "Client"} · {user.email}
         </p>
       </div>
+
+      <BackupControls />
+      {data ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-2xl">Week</h2>
+          <p className="text-base leading-6 text-muted-foreground">
+            Home starts the week on this day.
+          </p>
+          <div role="radiogroup" aria-label="Week starts on" className="flex rounded-full bg-muted p-0.5">
+            {(
+              [
+                ["monday", "Monday"],
+                ["sunday", "Sunday"],
+              ] as const
+            ).map(([value, label]) => {
+              const selected = data.weekStartsOn === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => {
+                    const result = setWeekStart(value);
+                    if (!result.ok) setNotice(result.error);
+                  }}
+                  className="theme-option inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-3 text-sm font-medium text-muted-foreground"
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-2xl">Home screen</h2>

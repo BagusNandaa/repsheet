@@ -107,13 +107,13 @@ test("a gap ends the streak, and an open current week does not", () => {
   );
 });
 
-test("Sunday week start is available when a caller passes it", () => {
-  assert.deepEqual(trainingStreaks(["2026-10-18"], "2026-10-21", 0), {
+test("the stored Sunday week start groups the boundary with that week", () => {
+  assert.deepEqual(trainingStreaks(["2026-10-18"], "2026-10-21", "sunday"), {
     consecutiveWeeks: 1,
     workoutsThisWeek: 1,
     totalWorkouts: 1,
   });
-  const sundayWeek = yearHeatmap(["2026-10-18"], "2026-10-21", 0).weeks.at(-1);
+  const sundayWeek = yearHeatmap(["2026-10-18"], "2026-10-21", "sunday").weeks.at(-1);
   assert.equal(sundayWeek?.start, "2026-10-18");
   assert.equal(sundayWeek?.days[0]?.count, 1);
   assert.equal(sundayWeek?.days[3]?.date, "2026-10-21");

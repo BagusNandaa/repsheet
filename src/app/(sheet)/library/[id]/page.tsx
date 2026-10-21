@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { VideoPlayer } from "@/components/video-player";
 import { BackLink, EmptyNote } from "@/components/sheet-ui";
 import { useStore } from "@/lib/store";
@@ -8,7 +9,7 @@ import { useStore } from "@/lib/store";
 export default function ExercisePage() {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { data } = useStore();
+  const { data, user } = useStore();
   if (!data || !id) return null;
 
   const exercise = data.exercises.find((item) => item.id === id);
@@ -30,6 +31,11 @@ export default function ExercisePage() {
         <p className="mt-3 text-base leading-6">{exercise.cue}</p>
       </div>
       <VideoPlayer exercise={exercise} />
+      {user?.role === "client" ? (
+        <Link href={`/exercises/${exercise.id}`} className="text-sm font-medium text-[var(--brand-text)]">
+          Your history
+        </Link>
+      ) : null}
     </div>
   );
 }

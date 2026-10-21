@@ -10,12 +10,15 @@ import {
 } from "react";
 import { isISODate, todayISO } from "@/lib/format";
 import {
+  SESSION_KEY,
   STORAGE_KEY_V2,
   expandUniformSets,
   persistedSheet,
   readStoredSheet,
 } from "@/lib/migrate";
 import { createSeed } from "@/lib/seed";
+import { planWorkoutId, WEEKDAYS } from "@/lib/schedule";
+import { canonicalProgression } from "@/lib/progression";
 import { applyClientSetUpdate, planClientSession } from "@/lib/session-plan";
 import { normalizeGoal } from "@/lib/weight-goal";
 import type {
@@ -23,14 +26,18 @@ import type {
   AppData,
   CoachLoggedExercise,
   Measurement,
+  PlanOverride,
+  ProgressionRule,
   Result,
   SignInResult,
   StartWorkoutResult,
+  TargetOverride,
   User,
+  Weekday,
+  WeeklyPlan,
+  WeekStart,
   WorkoutMove,
 } from "@/lib/types";
-
-const SESSION_KEY = "repsheet.user";
 
 type Snapshot = {
   ready: boolean;
@@ -68,15 +75,35 @@ type StoreValue = {
   assignWorkout: (input: {
     clientId: string;
     name: string;
-    moves: Array<Omit<WorkoutMove, "id">>;
+    progression?: ProgressionRule;
+    moves: Array<Omit<WorkoutMove, "id" | "targetOverride"> & { targetOverride?: TargetOverride | null }>;
+  }) => Result;
+  saveWorkoutProgression: (input: {
+    workoutId: string;
+    progression: ProgressionRule;
+    moves: Array<{
+      id: string;
+      progression: ProgressionRule | null;
+      targetOverride: TargetOverride | null;
+    }>;
   }) => Result;
   startClientWorkout: (workoutId: string) => StartWorkoutResult;
+  saveWeeklyPlan: (input: { clientId: string; days: Partial<Record<Weekday, string>> }) => Result;
+  setDateOverride: (input: {
+    clientId: string;
+    date: string;
+    kind: "skip" | "move";
+    toDate?: string;
+  }) => Result;
+  clearDateOverride: (input: { clientId: string; date: string }) => Result;
+  setWeekStart: (weekStartsOn: WeekStart) => Result;
   updateClientSet: (input: {
     sessionId: string;
     setId: string;
     weightKg?: number;
     reps?: number;
     done?: boolean;
+    isWarmup?: boolean;
   }) => Result;
   resetDemo: () => void;
 };
@@ -172,6 +199,24 @@ function round1(value: number) {
 function roundOptional(value: number | undefined) {
   if (value === undefined) return undefined;
   return round1(value);
+}
+
+function collectPlanDays(
+  days: Partial<Record<Weekday, string>>,
+  workouts: AppData["workouts"],
+  clientId: string,
+): { ok: true; days: WeeklyPlan["days"] } | { ok: false; error: string } {
+  const next: WeeklyPlan["days"] = {};
+  for (const weekday of WEEKDAYS) {
+    const workoutId = days[weekday];
+    if (!workoutId) continue;
+    const workout = workouts.find((item) => item.id === workoutId);
+    if (!workout || workout.clientId !== clientId) {
+      return { ok: false, error: "Choose a workout assigned to this client." };
+    }
+    next[weekday] = workoutId;
+  }
+  return { ok: true, days: next };
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -414,7 +459,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (input: {
       clientId: string;
       name: string;
-      moves: Array<Omit<WorkoutMove, "id">>;
+      progression?: ProgressionRule;
+      moves: Array<Omit<WorkoutMove, "id" | "targetOverride"> & { targetOverride?: TargetOverride | null }>;
     }): Result => {
       const current = getSnapshot();
       const denied = coachError(currentUser(current));
@@ -427,6 +473,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: "Name the workout in 2 to 60 characters." };
       }
       if (input.moves.length === 0) return { ok: false, error: "Add at least one move." };
+      const progression = canonicalProgression(input.progression ?? { kind: "none" });
+      if (!progression.ok) return progression;
+      const moves: WorkoutMove[] = [];
       for (const move of input.moves) {
         if (!current.data.exercises.some((item) => item.id === move.exerciseId)) {
           return { ok: false, error: "Choose an exercise from the library." };
@@ -438,6 +487,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (reps.length < 1 || reps.length > 20) {
           return { ok: false, error: "Enter the reps, such as 8 or 40 sec." };
         }
+        let moveRule: ProgressionRule | null = null;
+        if (move.progression) {
+          const checked = canonicalProgression(move.progression);
+          if (!checked.ok) return checked;
+          moveRule = checked.rule;
+        }
+        moves.push({
+          id: crypto.randomUUID(),
+          exerciseId: move.exerciseId,
+          sets: move.sets,
+          reps,
+          progression: moveRule,
+          targetOverride: null,
+        });
       }
       commit({
         ...current,
@@ -450,11 +513,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               clientId: input.clientId,
               name,
               assignedAt: todayISO(),
-              moves: input.moves.map((move) => ({
-                ...move,
-                id: crypto.randomUUID(),
-                reps: move.reps.trim(),
-              })),
+              progression: progression.rule,
+              moves,
             },
           ],
         },
@@ -463,6 +523,163 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  const saveWorkoutProgression = useCallback(
+    (input: {
+      workoutId: string;
+      progression: ProgressionRule;
+      moves: Array<{
+        id: string;
+        progression: ProgressionRule | null;
+        targetOverride: TargetOverride | null;
+      }>;
+    }): Result => {
+      const current = getSnapshot();
+      const denied = coachError(currentUser(current));
+      if (denied) return { ok: false, error: denied };
+      const workout = current.data.workouts.find((item) => item.id === input.workoutId);
+      if (!workout) return { ok: false, error: "That workout is not on this sheet." };
+      const progression = canonicalProgression(input.progression);
+      if (!progression.ok) return progression;
+      const moves: WorkoutMove[] = [];
+      for (const move of workout.moves) {
+        const patch = input.moves.find((item) => item.id === move.id);
+        if (!patch) {
+          moves.push(move);
+          continue;
+        }
+        let moveRule: ProgressionRule | null = null;
+        if (patch.progression) {
+          const checked = canonicalProgression(patch.progression);
+          if (!checked.ok) return checked;
+          moveRule = checked.rule;
+        }
+        let targetOverride: TargetOverride | null = null;
+        if (patch.targetOverride) {
+          const weightKg = round1(patch.targetOverride.weightKg);
+          const reps = patch.targetOverride.reps;
+          if (!Number.isFinite(weightKg) || weightKg < 0 || weightKg > 400) {
+            return { ok: false, error: "Enter a target weight from 0 to 400 kg." };
+          }
+          if (!Number.isInteger(reps) || reps < 0 || reps > 100) {
+            return { ok: false, error: "Enter target reps from 0 to 100." };
+          }
+          targetOverride = { weightKg, reps };
+        }
+        moves.push({ ...move, progression: moveRule, targetOverride });
+      }
+      commit({
+        ...current,
+        data: {
+          ...current.data,
+          workouts: current.data.workouts.map((item) =>
+            item.id === workout.id ? { ...item, progression: progression.rule, moves } : item,
+          ),
+        },
+      });
+      return { ok: true };
+    },
+    [],
+  );
+
+  const saveWeeklyPlan = useCallback(
+    (input: { clientId: string; days: Partial<Record<Weekday, string>> }): Result => {
+      const current = getSnapshot();
+      const denied = coachError(currentUser(current));
+      if (denied) return { ok: false, error: denied };
+      if (!current.data.clients.some((client) => client.id === input.clientId)) {
+        return { ok: false, error: "That client is not on this sheet." };
+      }
+      const collected = collectPlanDays(input.days, current.data.workouts, input.clientId);
+      if (!collected.ok) return collected;
+      const plans = current.data.plans.filter((plan) => plan.clientId !== input.clientId);
+      plans.push({ clientId: input.clientId, days: collected.days });
+      commit({ ...current, data: { ...current.data, plans } });
+      return { ok: true };
+    },
+    [],
+  );
+
+  const setDateOverride = useCallback(
+    (input: {
+      clientId: string;
+      date: string;
+      kind: "skip" | "move";
+      toDate?: string;
+    }): Result => {
+      const current = getSnapshot();
+      const denied = coachError(currentUser(current));
+      if (denied) return { ok: false, error: denied };
+      if (!current.data.clients.some((client) => client.id === input.clientId)) {
+        return { ok: false, error: "That client is not on this sheet." };
+      }
+      if (!isISODate(input.date)) return { ok: false, error: "Choose a real date." };
+      const plan = current.data.plans.find((item) => item.clientId === input.clientId) ?? null;
+      const plannedId = planWorkoutId(plan, input.date);
+      const known = current.data.workouts.some(
+        (workout) => workout.id === plannedId && workout.clientId === input.clientId,
+      );
+      if (!plannedId || !known) {
+        return {
+          ok: false,
+          error:
+            input.kind === "move"
+              ? "That date has no workout to move."
+              : "That date is a rest day in the week plan.",
+        };
+      }
+      let toDate: string | null = null;
+      if (input.kind === "move") {
+        if (!input.toDate || !isISODate(input.toDate)) {
+          return { ok: false, error: "Choose the date to move it to." };
+        }
+        if (input.toDate === input.date) return { ok: false, error: "Pick a different date." };
+        toDate = input.toDate;
+      }
+      const existing = current.data.overrides.find(
+        (override) => override.clientId === input.clientId && override.date === input.date,
+      );
+      const next: PlanOverride = {
+        id: existing?.id ?? crypto.randomUUID(),
+        clientId: input.clientId,
+        date: input.date,
+        kind: input.kind,
+        toDate,
+      };
+      const overrides = current.data.overrides.filter(
+        (override) => !(override.clientId === input.clientId && override.date === input.date),
+      );
+      overrides.push(next);
+      commit({ ...current, data: { ...current.data, overrides } });
+      return { ok: true };
+    },
+    [],
+  );
+
+  const clearDateOverride = useCallback(
+    (input: { clientId: string; date: string }): Result => {
+      const current = getSnapshot();
+      const denied = coachError(currentUser(current));
+      if (denied) return { ok: false, error: denied };
+      const overrides = current.data.overrides.filter(
+        (override) => !(override.clientId === input.clientId && override.date === input.date),
+      );
+      if (overrides.length === current.data.overrides.length) {
+        return { ok: false, error: "That date has no exception." };
+      }
+      commit({ ...current, data: { ...current.data, overrides } });
+      return { ok: true };
+    },
+    [],
+  );
+
+  const setWeekStart = useCallback((weekStartsOn: WeekStart): Result => {
+    const current = getSnapshot();
+    if (!currentUser(current)) return { ok: false, error: "Sign in to change the week." };
+    if (current.data.weekStartsOn === weekStartsOn) return { ok: true };
+    commit({ ...current, data: { ...current.data, weekStartsOn } });
+    return { ok: true };
+  }, []);
 
   const startClientWorkout = useCallback((workoutId: string): StartWorkoutResult => {
     const current = getSnapshot();
@@ -497,6 +714,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       weightKg?: number;
       reps?: number;
       done?: boolean;
+      isWarmup?: boolean;
     }): Result => {
       const current = getSnapshot();
       const user = currentUser(current);
@@ -507,10 +725,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!session || session.clientId !== user.clientId) {
         return { ok: false, error: "That session is not on your sheet." };
       }
-      const patch: { weightKg?: number; reps?: number; done?: boolean } = {};
+      const patch: { weightKg?: number; reps?: number; done?: boolean; isWarmup?: boolean } = {};
       if (input.weightKg !== undefined) patch.weightKg = input.weightKg;
       if (input.reps !== undefined) patch.reps = input.reps;
       if (input.done !== undefined) patch.done = input.done;
+      if (input.isWarmup !== undefined) patch.isWarmup = input.isWarmup;
       const updated = applyClientSetUpdate(
         current.data.sessions,
         input.sessionId,
@@ -550,6 +769,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setGoalWeight,
     addSession,
     assignWorkout,
+    saveWorkoutProgression,
+    saveWeeklyPlan,
+    setDateOverride,
+    clearDateOverride,
+    setWeekStart,
     startClientWorkout,
     updateClientSet,
     resetDemo,

@@ -2,13 +2,23 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
-  MONDAY,
   describeTrainingDay,
   heatmapMonthLabels,
   heatmapWeekdayLabels,
   trainingStreaks,
   yearHeatmap,
 } from "@/lib/activity";
+import type { WeekStart } from "@/lib/types";
+
+const weekStartLabel: Record<WeekStart, string> = {
+  monday: "Monday",
+  sunday: "Sunday",
+};
+
+const weekEndLabel: Record<WeekStart, string> = {
+  monday: "Sunday",
+  sunday: "Saturday",
+};
 
 function cellId(date: string) {
   return `training-day-${date}`;
@@ -17,18 +27,20 @@ function cellId(date: string) {
 export function ActivityPanel({
   dates,
   today,
+  weekStartsOn,
   id,
 }: {
   dates: string[];
   today: string;
+  weekStartsOn: WeekStart;
   id?: string;
 }) {
-  const streaks = trainingStreaks(dates, today, MONDAY);
-  const heatmap = yearHeatmap(dates, today, MONDAY);
+  const streaks = trainingStreaks(dates, today, weekStartsOn);
+  const heatmap = yearHeatmap(dates, today, weekStartsOn);
   const days = heatmap.weeks.flatMap((week) => week.days);
   const months = heatmapMonthLabels(heatmap.weeks);
   const monthAt = new Map(months.map((month) => [month.index, month.label]));
-  const weekdays = heatmapWeekdayLabels(MONDAY);
+  const weekdays = heatmapWeekdayLabels(weekStartsOn);
   const scrollRef = useRef<HTMLDivElement>(null);
   const todayIndex = days.findIndex((day) => day.date === today);
   const [activeIndex, setActiveIndex] = useState(todayIndex >= 0 ? todayIndex : 0);
@@ -89,8 +101,8 @@ export function ActivityPanel({
       </dl>
       <p className="text-sm text-muted-foreground">
         {streaks.workoutsThisWeek === 0 && streaks.consecutiveWeeks > 0
-          ? "This week is still open. The streak holds until Sunday."
-          : "Logged sessions only. Monday starts the week."}
+          ? `This week is still open. The streak holds until ${weekEndLabel[weekStartsOn]}.`
+          : `Logged sessions only. ${weekStartLabel[weekStartsOn]} starts the week.`}
       </p>
 
       {days.length === 0 ? null : (

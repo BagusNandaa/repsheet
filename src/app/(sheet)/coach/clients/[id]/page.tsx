@@ -5,10 +5,12 @@ import { useParams } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActivityPanel } from "@/components/activity-panel";
+import { ExerciseRecordLinks } from "@/components/exercise-history";
 import { GoalForm } from "@/components/goal-form";
 import { SessionCard } from "@/components/session-card";
 import { StatsBlock } from "@/components/stats-block";
 import { BackLink, EmptyNote, actionClass } from "@/components/sheet-ui";
+import { WeekPlanEditor } from "@/components/week-plan-editor";
 import { exerciseName, formatDate, formatKg, todayISO } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import { readGoalWeight } from "@/lib/weight-goal";
@@ -56,11 +58,17 @@ export default function ClientSheetPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <a href="#plan" className="rounded-full bg-muted px-3 py-1.5 text-sm">
+            Week
+          </a>
           <a href="#stats" className="rounded-full bg-muted px-3 py-1.5 text-sm">
             Stats
           </a>
           <a href="#training" className="rounded-full bg-muted px-3 py-1.5 text-sm">
             Training
+          </a>
+          <a href="#records" className="rounded-full bg-muted px-3 py-1.5 text-sm">
+            Records
           </a>
           <a href="#sessions" className="rounded-full bg-muted px-3 py-1.5 text-sm">
             Sessions
@@ -119,7 +127,18 @@ export default function ClientSheetPage() {
         id="training"
         dates={sessions.map((session) => session.date)}
         today={today}
+        weekStartsOn={data.weekStartsOn}
       />
+
+      <section id="records" className="flex flex-col gap-4">
+        <h2 className="font-display text-2xl">Records</h2>
+        <ExerciseRecordLinks
+          exercises={data.exercises}
+          sessions={data.sessions}
+          clientId={client.id}
+          hrefFor={(exerciseId) => `/coach/clients/${client.id}/exercises/${exerciseId}`}
+        />
+      </section>
 
       <section id="sessions" className="flex flex-col gap-4">
         <h2 className="font-display text-2xl">Sessions</h2>
@@ -173,6 +192,16 @@ export default function ClientSheetPage() {
           Assign a workout
         </Link>
       </section>
+
+      <WeekPlanEditor
+        key={client.id}
+        clientId={client.id}
+        clientName={client.name}
+        workouts={workouts}
+        plan={data.plans.find((item) => item.clientId === client.id) ?? null}
+        overrides={data.overrides.filter((item) => item.clientId === client.id)}
+        weekStartsOn={data.weekStartsOn}
+      />
     </div>
   );
 }

@@ -1,12 +1,20 @@
+import { isISODate } from "./format";
+import { readProgressionRule, readTargetOverride } from "./progression";
 import { SHEET_VERSION } from "./types";
 import type {
   AppData,
   Client,
   LoggedBy,
   PersistedSheet,
+  PlanOverride,
   Session,
   SessionExercise,
   SessionSet,
+  Weekday,
+  WeeklyPlan,
+  WeekStart,
+  Workout,
+  WorkoutMove,
 } from "./types";
 import { normalizeGoal } from "./weight-goal";
 
@@ -15,6 +23,9 @@ export const STORAGE_KEY_V1 = "repsheet.v1";
 
 /** Current key. `version` inside the JSON matches SHEET_VERSION. */
 export const STORAGE_KEY_V2 = "repsheet.v2";
+
+/** Who is signed in on this device. Separate from the sheet JSON. */
+export const SESSION_KEY = "repsheet.user";
 
 /**
  * Safety cap when a stored set count is an integer but absurdly large.
@@ -149,6 +160,89 @@ function arrayOf<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+function migrateWeekStart(value: unknown): WeekStart {
+  return value === "sunday" ? "sunday" : "monday";
+}
+
+function normalizePlan(raw: unknown): WeeklyPlan | null {
+  if (!isRecord(raw)) return null;
+  const clientId = stringField(raw.clientId, "");
+  if (!clientId) return null;
+  const source = isRecord(raw.days) ? raw.days : {};
+  const days: Partial<Record<Weekday, string>> = {};
+  for (let weekday = 0; weekday <= 6; weekday += 1) {
+    const value = source[String(weekday)];
+    if (typeof value === "string" && value.length > 0) {
+      days[weekday as Weekday] = value;
+    }
+  }
+  return { clientId, days };
+}
+
+function migratePlans(raw: unknown): WeeklyPlan[] {
+  if (!Array.isArray(raw)) return [];
+  const byClient = new Map<string, WeeklyPlan>();
+  for (const item of raw) {
+    const plan = normalizePlan(item);
+    if (plan) byClient.set(plan.clientId, plan);
+  }
+  return [...byClient.values()];
+}
+
+function normalizeOverride(raw: unknown, index: number): PlanOverride | null {
+  if (!isRecord(raw)) return null;
+  const clientId = stringField(raw.clientId, "");
+  const date = stringField(raw.date, "");
+  if (!clientId || !isISODate(date)) return null;
+  const id = idField(raw.id, `override-${index + 1}`);
+  if (raw.kind === "skip") return { id, clientId, date, kind: "skip", toDate: null };
+  if (raw.kind !== "move") return null;
+  const toDate = stringField(raw.toDate, "");
+  if (!isISODate(toDate) || toDate === date) return null;
+  return { id, clientId, date, kind: "move", toDate };
+}
+
+function migrateMove(raw: unknown, index: number): WorkoutMove {
+  const move = isRecord(raw) ? raw : {};
+  return {
+    id: idField(move.id, `move-${index + 1}`),
+    exerciseId: stringField(move.exerciseId, ""),
+    sets: typeof move.sets === "number" ? move.sets : 1,
+    reps: stringField(move.reps, ""),
+    progression: move.progression == null ? null : readProgressionRule(move.progression),
+    targetOverride: readTargetOverride(move.targetOverride),
+  };
+}
+
+function migrateWorkout(raw: unknown, index: number): Workout {
+  const workout = isRecord(raw) ? raw : {};
+  const moves = Array.isArray(workout.moves) ? workout.moves : [];
+  return {
+    id: idField(workout.id, `workout-${index + 1}`),
+    clientId: stringField(workout.clientId, ""),
+    name: stringField(workout.name, ""),
+    assignedAt: stringField(workout.assignedAt, ""),
+    progression: readProgressionRule(workout.progression),
+    moves: moves.map(migrateMove),
+  };
+}
+
+function migrateWorkouts(raw: unknown): Workout[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(migrateWorkout);
+}
+
+function migrateOverrides(raw: unknown): PlanOverride[] {
+  if (!Array.isArray(raw)) return [];
+  const bySource = new Map<string, PlanOverride>();
+  raw.forEach((item, index) => {
+    const override = normalizeOverride(item, index);
+    if (!override) return;
+    bySource.set(`${override.clientId}\0${override.date}`, override);
+  });
+  return [...bySource.values()];
+}
+
 /**
  * Keep every stored client field. A missing or invalid `goalWeightKg` becomes
  * null so an older v2 sheet still loads and the chart has a safe default.
@@ -168,6 +262,10 @@ function migrateClients(raw: unknown): Client[] {
  * keeps client logs, warm-ups, and completed times as stored.
  * A client goal is kept when it is a kilogram value from 1 to 400.
  * Anything else, including a sheet that never had the field, becomes null.
+ * Week plans, single-date overrides, and the week start are kept when the
+ * sheet has them. An older v2 sheet gets an empty plan and Monday.
+ * A workout with no progression rule becomes None. A move with no rule
+ * follows the workout. A missing target override stays empty.
  */
 export function migrateSheet(raw: unknown): PersistedSheet {
   const record = isRecord(raw) ? raw : {};
@@ -178,7 +276,10 @@ export function migrateSheet(raw: unknown): PersistedSheet {
     clients: migrateClients(record.clients),
     measurements: arrayOf(record.measurements),
     sessions: sessions.map(migrateSession),
-    workouts: arrayOf(record.workouts),
+    workouts: migrateWorkouts(record.workouts),
+    plans: migratePlans(record.plans),
+    overrides: migrateOverrides(record.overrides),
+    weekStartsOn: migrateWeekStart(record.weekStartsOn),
   };
 }
 
@@ -190,6 +291,9 @@ export function persistedSheet(data: AppData): PersistedSheet {
     measurements: data.measurements,
     sessions: data.sessions,
     workouts: data.workouts,
+    plans: data.plans,
+    overrides: data.overrides,
+    weekStartsOn: data.weekStartsOn,
   };
 }
 
