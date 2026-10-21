@@ -26,7 +26,7 @@ export function WeightTrend({
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className="mt-3 h-16 w-full text-primary"
+      className="weight-trend mt-3 h-16 w-full text-primary"
       role="img"
       aria-label={label}
     >

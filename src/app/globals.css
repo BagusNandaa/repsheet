@@ -52,8 +52,10 @@
 
 :root {
   --desk: #e4dccb;
-  /* Brand accent. Rust is the default. Light text can use the fill directly:
-     #9a3e22 is 5.93:1 on the paper background. */
+  /* Paper base accent is rust. Light text can use the fill directly:
+     #9a3e22 is 5.93:1 on the paper background. A new visitor's stored
+     default is green, so light mode with that accent uses the override
+     below. The paper surfaces themselves stay these values. */
   --brand-fill: #9a3e22;
   --brand-ink: #fffaf3;
   --brand-text: #9a3e22;
@@ -106,56 +108,59 @@
   --ring: #166324;
 }
 
-/* Dark surfaces follow openGym: true black, two panels, hairline borders.
-   Rust stays the default accent. #9a3e22 is 3.09:1 on #000 and 2.61:1 on
-   #17181b, so it is fills only. Text and the focus ring use #d4785c
-   (5.61:1 on #17181b, 6.06:1 on #0e0f11, 6.64:1 on #000). Ink on the rust
-   fill is #fffaf3, 6.55:1.
+/* Dark follows a Nothing OS instrument face: black field, white and grey
+   type, square hairlines, and a spare accent. #9a3e22 is 3.09:1 on #000
+   and 2.71:1 on #141414, so rust is never dark text. Text and the focus
+   ring use #d4785c (6.64:1 on #000, 5.83:1 on #141414). Ink on the rust
+   fill is #fffaf3, 6.55:1. Green text #32d74b is 10.96:1 on #000 and
+   9.61:1 on #141414. Ink on the green fill is #04150a, 9.81:1.
    #7d7d85 is 4.35:1 on #17181b, short of AA, so it is not a text colour.
-   Secondary text is #a1a1a6 (6.90:1 on #17181b). Primary text is #f5f5f7.
-   --radius 20px maps the scale to 12px / 20px / 28px
-   (rounded-sm / rounded-lg / rounded-xl). */
+   Secondary text is #a1a1a6 (7.16:1 on #141414, 8.16:1 on #000).
+   Primary text is #f5f5f7. Key buttons are that white with #000 ink
+   (19.29:1). The accent is the focus ring, today's mark, and the
+   selected swatch. --radius 0 keeps frames square. The paper theme
+   does not use this block. */
 .dark {
   color-scheme: dark;
   --desk: #000000;
   --background: #000000;
   --foreground: #f5f5f7;
-  --card: #0e0f11;
+  --card: #000000;
   --card-foreground: #f5f5f7;
-  --popover: #17181b;
+  --popover: #141414;
   --popover-foreground: #f5f5f7;
-  --secondary: #17181b;
+  --secondary: #141414;
   --secondary-foreground: #f5f5f7;
-  --muted: #17181b;
+  --muted: #141414;
   --muted-foreground: #a1a1a6;
-  --accent: #17181b;
+  --accent: #141414;
   --accent-foreground: #f5f5f7;
   --destructive: #ff6b5a;
-  --border: rgba(255, 255, 255, 0.11);
-  --input: rgba(255, 255, 255, 0.11);
-  --hair: rgba(255, 255, 255, 0.11);
-  --hair-soft: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.18);
+  --input: rgba(255, 255, 255, 0.18);
+  --hair: rgba(255, 255, 255, 0.18);
+  --hair-soft: rgba(255, 255, 255, 0.08);
   --fg-2: #a1a1a6;
   --brand-fill: #9a3e22;
   --brand-ink: #fffaf3;
   --brand-text: #d4785c;
   --brand-soft: rgba(154, 62, 34, 0.24);
-  --primary: var(--brand-fill);
-  --primary-foreground: var(--brand-ink);
+  --primary: #f5f5f7;
+  --primary-foreground: #000000;
   --ring: var(--brand-text);
-  --chart-1: #d4785c;
+  --chart-1: #f5f5f7;
   --chart-2: #a1a1a6;
-  --chart-3: #f5f5f7;
-  --chart-4: #9a3e22;
-  --chart-5: #17181b;
-  --radius: 20px;
-  --sidebar: #0e0f11;
+  --chart-3: #ffffff;
+  --chart-4: #141414;
+  --chart-5: #000000;
+  --radius: 0px;
+  --sidebar: #000000;
   --sidebar-foreground: #f5f5f7;
-  --sidebar-primary: var(--brand-fill);
-  --sidebar-primary-foreground: var(--brand-ink);
-  --sidebar-accent: #17181b;
+  --sidebar-primary: #f5f5f7;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #141414;
   --sidebar-accent-foreground: #f5f5f7;
-  --sidebar-border: rgba(255, 255, 255, 0.11);
+  --sidebar-border: rgba(255, 255, 255, 0.18);
   --sidebar-ring: var(--brand-text);
 }
 
@@ -164,12 +169,8 @@
   --brand-ink: #04150a;
   --brand-text: #32d74b;
   --brand-soft: rgba(50, 215, 75, 0.13);
-  --primary: var(--brand-fill);
-  --primary-foreground: var(--brand-ink);
   --ring: var(--brand-text);
   --chart-1: #32d74b;
-  --sidebar-primary: var(--brand-fill);
-  --sidebar-primary-foreground: var(--brand-ink);
   --sidebar-ring: var(--brand-text);
 }
 
@@ -191,11 +192,28 @@
   }
 }
 
-/* Text utilities share --primary with fills. On dark, and for green on paper,
-   paint the contrast-safe tint instead of the fill. */
-.dark .text-primary,
+/* Green on paper cannot use the fill as text. Dark text-primary stays white
+   so the accent is not spent on navigation and links. */
 :root[data-accent="green"]:not(.dark) .text-primary {
   color: var(--brand-text);
+}
+
+.dark .text-primary {
+  color: var(--foreground);
+}
+
+.dark body {
+  font-family: var(--font-space-mono), ui-monospace, monospace;
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.dark .font-sans,
+.dark .font-medium {
+  font-family: var(--font-space-mono), ui-monospace, monospace;
+  font-weight: 400;
 }
 
 .dark ::selection {
@@ -209,16 +227,27 @@
 }
 
 .dark .app-header {
-  /* The blur utility owns backdrop-filter and composes it from these
-     variables. Putting the whole list in the blur variable keeps
-     saturate(180%) blur(20px) and beats backdrop-blur-sm's 8px blur. */
-  --tw-backdrop-blur: saturate(180%) blur(20px);
-  background-color: rgba(0, 0, 0, 0.68);
-  border-bottom-color: var(--hair-soft);
+  --tw-backdrop-blur: blur(0px);
+  background-color: #000000;
+  border-bottom-color: var(--hair);
+}
+
+.dark .app-header > div {
+  gap: 0.85rem;
+  padding-bottom: 0.9rem;
+}
+
+.dark main {
+  padding-top: 2.75rem;
+  padding-right: 1.5rem;
+  padding-left: 1.5rem;
 }
 
 .dark .group\/button {
-  border-radius: 999px;
+  border-radius: 0;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .dark :is(a, button) {
@@ -228,18 +257,111 @@
 }
 
 .dark .group\/button:active {
-  transform: scale(0.975);
+  transform: none;
+  opacity: 0.72;
 }
 
-.dark .font-display {
-  font-weight: 600;
-  letter-spacing: -0.03em;
+.dark label,
+.dark dt,
+.dark .kicker,
+.dark header p,
+.dark nav a,
+.dark .theme-option,
+.dark .accent-option,
+.dark .set-readout,
+.dark [data-slot="card-description"],
+.dark a.text-sm {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.dark nav a {
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+}
+
+.dark nav a[aria-current="page"] {
+  color: var(--foreground);
+  box-shadow: inset 0 -2px 0 0 var(--brand-text);
+}
+
+.dark h2 {
+  padding-bottom: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0.85px, transparent 1.05px);
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: 8px 4px;
+}
+
+.dark .font-display,
+.dark .font-heading {
+  font-family: var(--font-doto), var(--font-space-mono), monospace;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.dark .week-day,
+.dark .tabular-nums.font-display {
+  font-family: var(--font-doto), var(--font-space-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .dark .tabular-nums {
-  font-weight: 600;
-  letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.dark [data-slot="card"] {
+  --card-spacing: 1.35rem;
+  border-radius: 0;
+  background-color: #000000;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.dark .rounded-lg.bg-muted,
+.dark .rounded-xl.bg-muted,
+.dark a.rounded-full {
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.dark a.rounded-full {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.dark [role="radiogroup"] {
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.dark .theme-option,
+.dark .accent-option {
+  border-radius: 0;
+}
+
+.dark .weight-trend {
+  color: var(--foreground);
+}
+
+.dark .weight-trend polyline {
+  stroke-dasharray: 0.55 7;
+  stroke-linecap: round;
+  stroke-width: 4px;
 }
 
 .theme-option[aria-checked="true"],
@@ -250,6 +372,18 @@
 }
 
 .accent-option[aria-checked="true"] {
+  color: var(--brand-text);
+  box-shadow: inset 0 0 0 1px var(--brand-text);
+}
+
+.dark .theme-option[aria-checked="true"] {
+  background: #141414;
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
+.dark .accent-option[aria-checked="true"] {
+  background: #141414;
   color: var(--brand-text);
   box-shadow: inset 0 0 0 1px var(--brand-text);
 }

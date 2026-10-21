@@ -21,7 +21,7 @@ export function StatsBlock({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-sm text-muted-foreground">Weight · {formatDate(latest.date)}</p>
+        <p className="kicker text-sm text-muted-foreground">Weight · {formatDate(latest.date)}</p>
         <p className="font-display text-5xl tracking-tight tabular-nums">
           {formatKg(latest.weightKg)}
         </p>

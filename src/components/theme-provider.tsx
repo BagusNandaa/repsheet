@@ -24,7 +24,7 @@ type ThemeContextValue = Preference & {
   setAccent: (accent: Accent) => void;
 };
 
-const serverPreference: Preference = { mode: "system", accent: "rust" };
+const serverPreference: Preference = { mode: "dark", accent: "green" };
 let current: Preference = serverPreference;
 const listeners = new Set<() => void>();
 const ThemeContext = createContext<ThemeContextValue | null>(null);

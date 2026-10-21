@@ -16,8 +16,13 @@ function parseISODate(iso: string) {
 
 export function WeekStrip({ days, today }: { days: WeekStripDay[]; today: string }) {
   return (
-    <section aria-label="This week" className="rounded-xl border border-border bg-card px-3 py-3">
-      <h2 className="text-sm font-medium text-muted-foreground">This week</h2>
+    <section
+      aria-label="This week"
+      className="rounded-xl border border-border bg-card px-3 py-3 dark:rounded-none dark:bg-transparent dark:px-4 dark:py-5"
+    >
+      <h2 className="text-sm font-medium text-muted-foreground dark:text-[0.6875rem] dark:font-normal dark:tracking-[0.18em]">
+        This week
+      </h2>
       <p className="sr-only">
         A filled dot is a finished day. A ring is a planned day. Today is circled.
       </p>
@@ -37,8 +42,11 @@ export function WeekStrip({ days, today }: { days: WeekStripDay[]; today: string
               </span>
               <span
                 className={cn(
-                  "flex size-9 items-center justify-center rounded-full text-sm font-semibold tracking-[-0.03em] tabular-nums",
-                  current ? "bg-primary text-primary-foreground" : "text-foreground",
+                  "week-day flex size-9 items-center justify-center rounded-full text-sm font-semibold tracking-[-0.03em] tabular-nums",
+                  "dark:size-10 dark:rounded-none dark:font-normal dark:tracking-[0.04em]",
+                  current
+                    ? "bg-primary text-primary-foreground dark:bg-transparent dark:text-foreground dark:shadow-[inset_0_0_0_1px_var(--brand-text)]"
+                    : "text-foreground",
                 )}
                 aria-current={current ? "date" : undefined}
               >
@@ -52,8 +60,11 @@ export function WeekStrip({ days, today }: { days: WeekStripDay[]; today: string
                 className={cn(
                   "size-2 rounded-full",
                   day.status === "done" && "bg-[var(--brand-text)]",
-                  day.status === "planned" && "border border-[var(--brand-text)]",
-                  day.status === "none" && "bg-transparent",
+                  day.status === "planned" && "border border-[var(--brand-text)] bg-transparent",
+                  day.status === "none" && "bg-transparent dark:bg-foreground/20",
+                  !current && day.status === "done" && "dark:bg-foreground",
+                  !current && day.status === "planned" && "dark:border-foreground/70",
+                  current && "dark:border-transparent dark:bg-[var(--brand-text)]",
                 )}
               />
             </li>
