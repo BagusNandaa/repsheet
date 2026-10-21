@@ -1,3 +1,5 @@
+import { formatKg } from "./format";
+import { nextProgressionTarget, type ProgressionAttempt } from "./progression";
 import type { Result, Session, SessionSet, Workout, WorkoutMove } from "./types";
 
 /** One weight and rep count copied onto every set of a new exercise. */
@@ -10,6 +12,7 @@ export type SetPatch = {
   weightKg?: number;
   reps?: number;
   done?: boolean;
+  isWarmup?: boolean;
 };
 
 const MAX_SETS = 20;
@@ -75,6 +78,55 @@ export function exercisePrescription(
   );
 }
 
+function attemptsFor(
+  sessions: readonly Session[],
+  clientId: string,
+  exerciseId: string,
+): ProgressionAttempt[] {
+  return sessions
+    .map((session, index) => ({ session, index }))
+    .filter(({ session }) => session.clientId === clientId)
+    .filter(({ session }) => session.exercises.some((exercise) => exercise.exerciseId === exerciseId))
+    .sort((a, b) => {
+      if (a.session.date !== b.session.date) return a.session.date < b.session.date ? -1 : 1;
+      return a.index - b.index;
+    })
+    .map(({ session }) => ({
+      sets: session.exercises
+        .filter((exercise) => exercise.exerciseId === exerciseId)
+        .flatMap((exercise) => exercise.sets),
+    }));
+}
+
+/**
+ * Weight, reps, and the reason the client should see.
+ * None, and no coach override, keeps the last session (or the workout target).
+ * A rule walks history and returns its reason. A coach override replaces both.
+ * Pass sessions that exclude the one being logged, so this session is not its own source.
+ */
+export function exerciseTarget(input: {
+  sessions: readonly Session[];
+  clientId: string;
+  workout: Workout;
+  move: WorkoutMove;
+}): { weightKg: number; reps: number; reason: string | null } {
+  if (input.move.targetOverride) {
+    const { weightKg, reps } = input.move.targetOverride;
+    return { weightKg, reps, reason: `Coach set ${formatKg(weightKg)} × ${reps}` };
+  }
+  const rule = input.move.progression ?? input.workout.progression ?? { kind: "none" };
+  const baseline = exercisePrescription(input.sessions, input.clientId, input.move);
+  if (rule.kind === "none") {
+    return { weightKg: baseline.weightKg, reps: baseline.reps, reason: null };
+  }
+  const next = nextProgressionTarget({
+    rule,
+    attempts: attemptsFor(input.sessions, input.clientId, input.move.exerciseId),
+    targetReps: parseTargetReps(input.move.reps),
+  });
+  return { weightKg: next.weight, reps: next.reps, reason: next.reason };
+}
+
 function plannedSetCount(move: WorkoutMove) {
   if (Number.isInteger(move.sets) && move.sets >= 1 && move.sets <= MAX_SETS) return move.sets;
   return 1;
@@ -82,10 +134,10 @@ function plannedSetCount(move: WorkoutMove) {
 
 /**
  * A new client session for one assigned workout.
- * Each move becomes that many undone sets. Weight and reps come from the last
- * session for the exercise, otherwise the workout target (bodyweight when the
- * target has no weight). History is the sessions passed in, so the new session
- * is not its own source.
+ * Each move becomes that many undone sets. With no progression rule, weight and
+ * reps come from the last session for the exercise, otherwise the workout target.
+ * A rule or a coach override fills every set from that target instead.
+ * History is the sessions passed in, so the new session is not its own source.
  */
 export function buildClientSession(input: {
   clientId: string;
@@ -102,7 +154,12 @@ export function buildClientSession(input: {
     loggedBy: "client",
     workoutId: input.workout.id,
     exercises: input.workout.moves.map((move) => {
-      const prescription = exercisePrescription(input.sessions, input.clientId, move);
+      const prescription = exerciseTarget({
+        sessions: input.sessions,
+        clientId: input.clientId,
+        workout: input.workout,
+        move,
+      });
       const count = plannedSetCount(move);
       return {
         id: input.createId(),
@@ -249,8 +306,16 @@ export function firstOpenExerciseIndex(session: Session) {
 }
 
 export function validateSetPatch(patch: SetPatch): Result {
-  if (patch.weightKg === undefined && patch.reps === undefined && patch.done === undefined) {
+  if (
+    patch.weightKg === undefined &&
+    patch.reps === undefined &&
+    patch.done === undefined &&
+    patch.isWarmup === undefined
+  ) {
     return { ok: false, error: "Nothing to save." };
+  }
+  if (patch.isWarmup !== undefined && typeof patch.isWarmup !== "boolean") {
+    return { ok: false, error: "Warm-up must be on or off." };
   }
   if (
     patch.weightKg !== undefined &&
@@ -291,6 +356,7 @@ export function patchSessionSet(
         weightKg: patch.weightKg === undefined ? set.weightKg : round1(patch.weightKg),
         reps: patch.reps === undefined ? set.reps : patch.reps,
         done: patch.done ?? set.done,
+        isWarmup: patch.isWarmup ?? set.isWarmup,
         completedAt: nextCompleted,
       };
     }),

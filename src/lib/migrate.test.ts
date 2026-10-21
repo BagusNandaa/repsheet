@@ -114,10 +114,31 @@ test("migrates a v1 session into per-set rows without dropping other sheet data"
   assert.deepEqual(migrated.users, legacy.users);
   assert.deepEqual(migrated.clients, legacy.clients);
   assert.deepEqual(migrated.measurements, legacy.measurements);
-  assert.deepEqual(migrated.workouts, legacy.workouts);
+  assert.deepEqual(migrated.workouts, [
+    {
+      id: "workout-1",
+      clientId: "client-jordan",
+      name: "Strength A",
+      assignedAt: "2026-09-30",
+      progression: { kind: "none" },
+      moves: [
+        {
+          id: "wm-1",
+          exerciseId: "ex-back-squat",
+          sets: 4,
+          reps: "5",
+          progression: null,
+          targetOverride: null,
+        },
+      ],
+    },
+  ]);
   assert.equal(migrated.measurements[0]?.weightKg, 72.8);
   assert.equal(migrated.workouts[0]?.moves[0]?.sets, 4);
   assert.equal(migrated.workouts[0]?.moves[0]?.reps, "5");
+  assert.deepEqual(migrated.plans, []);
+  assert.deepEqual(migrated.overrides, []);
+  assert.equal(migrated.weekStartsOn, "monday");
 
   const [squat, pushUp, plank, bench, press] = session.exercises;
   assert.ok(squat && pushUp && plank && bench && press);
@@ -192,6 +213,144 @@ test("migrating a version 2 sheet keeps client logs, warm-ups, and clock times",
   assert.equal(once.sessions[0]?.exercises[0]?.sets[0]?.completedAt, "2026-10-21T09:00:00.000Z");
   assert.equal(once.sessions[0]?.exercises[0]?.sets[1]?.done, false);
   assert.equal(once.sessions[0]?.exercises[0]?.sets[1]?.completedAt, null);
+  assert.deepEqual(once.plans, []);
+  assert.deepEqual(once.overrides, []);
+  assert.equal(once.weekStartsOn, "monday");
+});
+
+test("a version 2 workout keeps its progression rule and fills None when the rule is missing", () => {
+  const sheet = {
+    version: SHEET_VERSION,
+    users: [{ id: "u" }],
+    clients: [{ id: "c" }],
+    measurements: [],
+    sessions: [],
+    plans: [],
+    overrides: [],
+    weekStartsOn: "monday" as const,
+    workouts: [
+      {
+        id: "w1",
+        clientId: "c",
+        name: "A",
+        assignedAt: "2026-10-01",
+        progression: { kind: "linear", incrementKg: 5, stallSessions: 2 },
+        moves: [
+          {
+            id: "m1",
+            exerciseId: "ex-back-squat",
+            sets: 3,
+            reps: "5",
+            progression: { kind: "double", incrementKg: 2.5, stallSessions: 3, repMin: 8, repMax: 12 },
+            targetOverride: { weightKg: 80, reps: 5 },
+          },
+        ],
+      },
+      {
+        id: "w2",
+        clientId: "c",
+        name: "B",
+        assignedAt: "2026-10-02",
+        moves: [{ id: "m2", exerciseId: "ex-plank", sets: 3, reps: "40 sec" }],
+      },
+    ],
+  };
+  const once = migrateSheet(sheet);
+  const twice = migrateSheet(once);
+  assert.deepEqual(once.workouts[0]?.progression, { kind: "linear", incrementKg: 5, stallSessions: 2 });
+  assert.deepEqual(once.workouts[0]?.moves[0]?.progression, {
+    kind: "double",
+    incrementKg: 2.5,
+    stallSessions: 3,
+    repMin: 8,
+    repMax: 12,
+  });
+  assert.deepEqual(once.workouts[0]?.moves[0]?.targetOverride, { weightKg: 80, reps: 5 });
+  assert.deepEqual(once.workouts[1]?.progression, { kind: "none" });
+  assert.equal(once.workouts[1]?.moves[0]?.progression, null);
+  assert.equal(once.workouts[1]?.moves[0]?.targetOverride, null);
+  assert.equal(once.workouts[1]?.moves[0]?.reps, "40 sec");
+  assert.deepEqual(twice.workouts, once.workouts);
+});
+
+test("a version 2 sheet keeps its week plan and does not rewrite sessions to add one", () => {
+  const sessions = [
+    {
+      id: "session-live",
+      clientId: "client-jordan",
+      date: "2026-10-21",
+      title: "Strength A",
+      loggedBy: "client",
+      workoutId: "workout-jordan-a",
+      exercises: [
+        {
+          id: "se-live",
+          exerciseId: "ex-bench-press",
+          sets: [
+            {
+              id: "work",
+              weightKg: 60,
+              reps: 8,
+              done: false,
+              isWarmup: false,
+              completedAt: null,
+            },
+          ],
+        },
+      ],
+    },
+  ];
+  const base = {
+    version: SHEET_VERSION,
+    users: [{ id: "user-jordan" }],
+    clients: [{ id: "client-jordan" }],
+    measurements: [],
+    workouts: [],
+    sessions,
+  };
+  const withPlan = {
+    ...base,
+    plans: [
+      {
+        clientId: "client-jordan",
+        days: { "1": "workout-jordan-a", "9": "nope", bad: "x", "3": "" },
+      },
+      { clientId: "client-jordan", days: { "5": "workout-jordan-b" } },
+      { days: { "1": "missing-client" } },
+    ],
+    overrides: [
+      { id: "skip-1", clientId: "client-jordan", date: "2026-10-21", kind: "skip" },
+      { id: "move-1", clientId: "client-jordan", date: "2026-10-22", kind: "move", toDate: "2026-10-23" },
+      { id: "move-1b", clientId: "client-jordan", date: "2026-10-22", kind: "move", toDate: "2026-10-24" },
+      { id: "bad-move", clientId: "client-jordan", date: "2026-10-25", kind: "move" },
+      { clientId: "client-jordan", date: "not-a-date", kind: "skip" },
+      { id: "same-day", clientId: "client-jordan", date: "2026-10-26", kind: "move", toDate: "2026-10-26" },
+    ],
+    weekStartsOn: "sunday",
+    plansExtra: true,
+  };
+  const plain = migrateSheet(base);
+  const richer = migrateSheet(withPlan);
+  const again = migrateSheet(richer);
+  assert.deepEqual(richer.sessions, plain.sessions);
+  assert.equal(richer.sessions[0]?.exercises[0]?.sets[0]?.done, false);
+  assert.deepEqual(again, richer);
+  assert.equal(richer.weekStartsOn, "sunday");
+  assert.deepEqual(richer.plans, [
+    { clientId: "client-jordan", days: { 5: "workout-jordan-b" } },
+  ]);
+  assert.deepEqual(richer.overrides, [
+    { id: "skip-1", clientId: "client-jordan", date: "2026-10-21", kind: "skip", toDate: null },
+    {
+      id: "move-1b",
+      clientId: "client-jordan",
+      date: "2026-10-22",
+      kind: "move",
+      toDate: "2026-10-24",
+    },
+  ]);
+  assert.equal(migrateSheet({ ...base, plans: "nope", overrides: null }).plans.length, 0);
+  assert.equal(migrateSheet({ ...base, weekStartsOn: "Monday" }).weekStartsOn, "monday");
 });
 
 test("empty data migrates to an empty version 2 sheet", () => {
@@ -202,6 +361,9 @@ test("empty data migrates to an empty version 2 sheet", () => {
     measurements: [],
     sessions: [],
     workouts: [],
+    plans: [],
+    overrides: [],
+    weekStartsOn: "monday" as const,
   };
   assert.deepEqual(migrateSheet(undefined), empty);
   assert.deepEqual(migrateSheet(null), empty);
@@ -246,6 +408,8 @@ test("a usable v2 sheet wins over a leftover v1 key", () => {
   const sheet = readStoredSheet(storage);
   assert.deepEqual(sheet?.sessions, []);
   assert.equal(sheet?.users[0]?.id, "user-alex");
+  assert.deepEqual(sheet?.plans, []);
+  assert.equal(sheet?.weekStartsOn, "monday");
   assert.ok(storage.getItem(STORAGE_KEY_V1));
 });
 
@@ -285,6 +449,10 @@ test("seed sessions are per-set rows and survive another migrate", () => {
   assert.deepEqual(twice.sessions, once.sessions);
   assert.deepEqual(once.users, seed.users);
   assert.deepEqual(once.workouts, seed.workouts);
+  assert.deepEqual(once.plans, seed.plans);
+  assert.deepEqual(once.overrides, seed.overrides);
+  assert.equal(once.weekStartsOn, seed.weekStartsOn);
+  assert.equal(twice.weekStartsOn, "monday");
 });
 
 test("a coach card still prints mixed set rows", () => {

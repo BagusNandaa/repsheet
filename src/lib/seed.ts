@@ -219,6 +219,10 @@ export function createSeed(): AppData {
         coachExercise("se-8", "ex-walking-lunge", 0, 10, 3),
         coachExercise("se-9", "ex-plank", 0, 40, 3),
       ]),
+      coachSession("session-jordan-monday", "client-jordan", "2026-10-19", "Strength A", [
+        coachExercise("se-10", "ex-back-squat", 100, 5, 4),
+        coachExercise("se-11", "ex-bench-press", 70, 6, 4),
+      ]),
     ],
     workouts: [
       {
@@ -226,11 +230,19 @@ export function createSeed(): AppData {
         clientId: "client-jordan",
         name: "Strength A",
         assignedAt: "2026-09-30",
+        progression: { kind: "linear", incrementKg: 2.5, stallSessions: 3 },
         moves: [
-          { id: "wm-1", exerciseId: "ex-back-squat", sets: 4, reps: "5" },
-          { id: "wm-2", exerciseId: "ex-bench-press", sets: 4, reps: "6" },
-          { id: "wm-3", exerciseId: "ex-bent-over-row", sets: 3, reps: "8" },
-          { id: "wm-4", exerciseId: "ex-plank", sets: 3, reps: "40 sec" },
+          { id: "wm-1", exerciseId: "ex-back-squat", sets: 4, reps: "5", progression: null, targetOverride: null },
+          { id: "wm-2", exerciseId: "ex-bench-press", sets: 4, reps: "6", progression: null, targetOverride: null },
+          { id: "wm-3", exerciseId: "ex-bent-over-row", sets: 3, reps: "8", progression: null, targetOverride: null },
+          {
+            id: "wm-4",
+            exerciseId: "ex-plank",
+            sets: 3,
+            reps: "40 sec",
+            progression: { kind: "none" },
+            targetOverride: null,
+          },
         ],
       },
       {
@@ -238,13 +250,34 @@ export function createSeed(): AppData {
         clientId: "client-sam",
         name: "Home circuit",
         assignedAt: "2026-09-28",
+        progression: { kind: "none" },
         moves: [
-          { id: "wm-5", exerciseId: "ex-push-up", sets: 3, reps: "12" },
-          { id: "wm-6", exerciseId: "ex-walking-lunge", sets: 3, reps: "10 each" },
-          { id: "wm-7", exerciseId: "ex-plank", sets: 3, reps: "40 sec" },
+          { id: "wm-5", exerciseId: "ex-push-up", sets: 3, reps: "12", progression: null, targetOverride: null },
+          { id: "wm-6", exerciseId: "ex-walking-lunge", sets: 3, reps: "10 each", progression: null, targetOverride: null },
+          { id: "wm-7", exerciseId: "ex-plank", sets: 3, reps: "40 sec", progression: null, targetOverride: null },
         ],
       },
     ],
+    plans: [
+      {
+        clientId: "client-jordan",
+        days: {
+          1: "workout-jordan-a",
+          3: "workout-jordan-a",
+          5: "workout-jordan-a",
+        },
+      },
+      {
+        clientId: "client-sam",
+        days: {
+          2: "workout-sam-home",
+          4: "workout-sam-home",
+          6: "workout-sam-home",
+        },
+      },
+    ],
+    overrides: [],
+    weekStartsOn: "monday",
     exercises,
   };
 }
