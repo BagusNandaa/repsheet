@@ -75,7 +75,7 @@ export default function AssignWorkoutPage() {
     <div className="flex flex-col gap-5">
       <BackLink href={`/coach/clients/${client.id}`}>{client.name}</BackLink>
       <PageIntro title="Assign a workout">
-        Each move uses the built-in example video. {client.name} can play it, and cannot edit the plan.
+        Each move uses the built-in example video. {client.name} logs the sets. You still write the workout.
       </PageIntro>
       <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
         <Field label="Workout name" htmlFor="workout-name" hint="For example, Strength A.">

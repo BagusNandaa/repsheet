@@ -7,6 +7,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { SessionCard } from "@/components/session-card";
 import { StatsBlock } from "@/components/stats-block";
 import { BackLink, EmptyNote, actionClass } from "@/components/sheet-ui";
+import { WeekPlanEditor } from "@/components/week-plan-editor";
 import { exerciseName, formatDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import { cn } from "cn";
@@ -51,6 +52,9 @@ export default function ClientSheetPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <a href="#plan" className="rounded-full bg-muted px-3 py-1.5 text-sm">
+            Week
+          </a>
           <a href="#stats" className="rounded-full bg-muted px-3 py-1.5 text-sm">
             Stats
           </a>
@@ -143,6 +147,16 @@ export default function ClientSheetPage() {
           Assign a workout
         </Link>
       </section>
+
+      <WeekPlanEditor
+        key={client.id}
+        clientId={client.id}
+        clientName={client.name}
+        workouts={workouts}
+        plan={data.plans.find((item) => item.clientId === client.id) ?? null}
+        overrides={data.overrides.filter((item) => item.clientId === client.id)}
+        weekStartsOn={data.weekStartsOn}
+      />
     </div>
   );
 }
