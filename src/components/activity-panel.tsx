@@ -63,6 +63,7 @@ export function ActivityPanel({
     const bounded = Math.max(0, Math.min(days.length - 1, next));
     const day = days[bounded];
     if (!day) return;
+    setHoverDate(null);
     setActiveIndex(bounded);
     document.getElementById(cellId(day.date))?.focus();
   }

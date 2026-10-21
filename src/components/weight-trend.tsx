@@ -61,9 +61,14 @@ export function WeightTrend({
       aria-label={label}
     >
       {goalY != null ? (
-        <line className="trend-goal" x1={pad} x2={width - pad} y1={goalY} y2={goalY}>
-          <title>{`Goal, ${formatKg(goalKg ?? 0)}`}</title>
-        </line>
+        <>
+          <line className="trend-goal" x1={pad} x2={width - pad} y1={goalY} y2={goalY}>
+            <title>{`Goal, ${formatKg(goalKg ?? 0)}`}</title>
+          </line>
+          <text x={width - pad} y={goalY < 18 ? goalY + 14 : goalY - 6} textAnchor="end">
+            Goal
+          </text>
+        </>
       ) : null}
       {goalKg == null ? (
         <polyline

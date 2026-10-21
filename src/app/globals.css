@@ -391,8 +391,14 @@
 
 .weight-trend .trend-goal {
   stroke: var(--brand-text);
-  stroke-width: 1.5px;
-  stroke-dasharray: 4 3;
+  stroke-width: 2px;
+  stroke-dasharray: 5 4;
+}
+
+.weight-trend text {
+  fill: var(--foreground);
+  font-size: 12px;
+  font-family: var(--font-space-mono), var(--font-outfit), sans-serif;
 }
 
 .dark .weight-trend polyline.trend-line {
