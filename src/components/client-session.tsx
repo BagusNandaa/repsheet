@@ -82,7 +82,10 @@ function getRestSnapshot() {
   return cachedRest;
 }
 
-function publishRest(timer: RestTimer | null) {
+function publishRest(timer: RestTimer | null, now?: number) {
+  // The display clock otherwise lags the click by up to one tick, and the
+  // countdown rounds that extra fraction up to another second.
+  if (now !== undefined) clockNow = now;
   writeRestTimer(localStorage, timer);
   cachedRestRaw = localStorage.getItem(REST_STORAGE_KEY);
   cachedRest = timer;
@@ -226,7 +229,8 @@ function SetRow({
           const result = onUpdate({ done: nextDone });
           if (!result.ok) return;
           if (nextDone) {
-            publishRest(startRest(Date.now(), DEFAULT_REST_MS, sessionId, set.id));
+            const now = Date.now();
+            publishRest(startRest(now, DEFAULT_REST_MS, sessionId, set.id), now);
             return;
           }
           if (getRestSnapshot()?.setId === set.id) publishRest(skipRest());
@@ -272,7 +276,10 @@ function RestTimerPanel({
           type="button"
           variant="outline"
           className="h-12"
-          onClick={() => publishRest(adjustRest(timer, -REST_STEP_MS, Date.now()))}
+          onClick={() => {
+            const now = Date.now();
+            publishRest(adjustRest(timer, -REST_STEP_MS, now), now);
+          }}
         >
           −15s
         </Button>
@@ -281,8 +288,8 @@ function RestTimerPanel({
           variant="secondary"
           className="h-12"
           onClick={() => {
-            const at = Date.now();
-            publishRest(paused ? resumeRest(timer, at) : pauseRest(timer, at));
+            const now = Date.now();
+            publishRest(paused ? resumeRest(timer, now) : pauseRest(timer, now), now);
           }}
         >
           {paused ? "Resume" : "Pause"}
@@ -291,7 +298,10 @@ function RestTimerPanel({
           type="button"
           variant="outline"
           className="h-12"
-          onClick={() => publishRest(adjustRest(timer, REST_STEP_MS, Date.now()))}
+          onClick={() => {
+            const now = Date.now();
+            publishRest(adjustRest(timer, REST_STEP_MS, now), now);
+          }}
         >
           +15s
         </Button>
