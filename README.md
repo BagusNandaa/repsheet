@@ -38,12 +38,16 @@ Use the browser menu to add Repsheet to the home screen, then open it from the i
 - The coach session form still takes one weight, one rep count, and a set count. Saving writes that many matching set rows.
 - A client opens an assigned workout and logs each set. Weight and reps start from their last session for that exercise, or from the workout target when they have not logged it before. 0 kg means bodyweight. Marking a set done starts a 90 second rest.
 - A client can see stats and session history, open an assigned workout, and play each move's example video.
+- The coach sets a body-weight goal per client. Home shows how far the latest weigh-in is from that goal. The weight chart draws the goal and colours each change by whether it moves closer or farther.
+- Home and the client sheet show a year of training days, plus consecutive weeks trained, workouts this week, and the total. Those counts use logged sessions. A week starts on Monday.
 - Coach and client share the same built-in video library.
 - The eight clips are short placeholders with a play control, labeled as example clips.
 
 ## Saved on this device
 
 The current sheet is `repsheet.v2` with `version: 2`. A browser that still has `repsheet.v1` is migrated the next time the app opens. `repsheet.v2` is written first, then `repsheet.v1` is removed. If both keys exist, `repsheet.v2` is the sheet. No stored key means the demo seed.
+
+`goalWeightKg` sits on the client, in kilograms. Null means no goal. A v2 sheet that omits the field still loads, and the goal is treated as unset. The sheet version stays 2. Other client fields are left as stored.
 
 v1 stored one weight, one rep count, and a set count on each exercise. That count is expanded into rows:
 

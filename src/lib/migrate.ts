@@ -1,12 +1,14 @@
 import { SHEET_VERSION } from "./types";
 import type {
   AppData,
+  Client,
   LoggedBy,
   PersistedSheet,
   Session,
   SessionExercise,
   SessionSet,
 } from "./types";
+import { normalizeGoal } from "./weight-goal";
 
 /** Previous key. One weight, one rep count, and a set count per exercise. */
 export const STORAGE_KEY_V1 = "repsheet.v1";
@@ -148,10 +150,24 @@ function arrayOf<T>(value: unknown): T[] {
 }
 
 /**
+ * Keep every stored client field. A missing or invalid `goalWeightKg` becomes
+ * null so an older v2 sheet still loads and the chart has a safe default.
+ */
+function migrateClients(raw: unknown): Client[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    return [{ ...item, goalWeightKg: normalizeGoal(item.goalWeightKg) } as Client];
+  });
+}
+
+/**
  * Turn a stored sheet into version 2.
- * Pass-through entities (people, measurements, assigned workouts) are copied.
- * Only session exercises change shape. Running this on a version 2 sheet
+ * People, measurements, and assigned workouts are copied.
+ * Session exercises stay per-set rows. Running this on a version 2 sheet
  * keeps client logs, warm-ups, and completed times as stored.
+ * A client goal is kept when it is a kilogram value from 1 to 400.
+ * Anything else, including a sheet that never had the field, becomes null.
  */
 export function migrateSheet(raw: unknown): PersistedSheet {
   const record = isRecord(raw) ? raw : {};
@@ -159,7 +175,7 @@ export function migrateSheet(raw: unknown): PersistedSheet {
   return {
     version: SHEET_VERSION,
     users: arrayOf(record.users),
-    clients: arrayOf(record.clients),
+    clients: migrateClients(record.clients),
     measurements: arrayOf(record.measurements),
     sessions: sessions.map(migrateSession),
     workouts: arrayOf(record.workouts),

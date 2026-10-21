@@ -17,6 +17,7 @@ import {
 } from "@/lib/migrate";
 import { createSeed } from "@/lib/seed";
 import { applyClientSetUpdate, planClientSession } from "@/lib/session-plan";
+import { normalizeGoal } from "@/lib/weight-goal";
 import type {
   AddClientResult,
   AppData,
@@ -48,6 +49,7 @@ type StoreValue = {
   signIn: (email: string, password: string) => SignInResult;
   signOut: () => void;
   addClient: (input: { name: string; email: string; password: string }) => AddClientResult;
+  setGoalWeight: (input: { clientId: string; goalWeightKg: number | null }) => Result;
   addMeasurement: (input: {
     clientId: string;
     date: string;
@@ -245,6 +247,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               email,
               userId: nextUser.id,
               createdAt: todayISO(),
+              goalWeightKg: null,
             },
           ],
         },
@@ -299,6 +302,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       commit({
         ...current,
         data: { ...current.data, measurements: [...current.data.measurements, entry] },
+      });
+      return { ok: true };
+    },
+    [],
+  );
+
+  const setGoalWeight = useCallback(
+    (input: { clientId: string; goalWeightKg: number | null }): Result => {
+      const current = getSnapshot();
+      const denied = coachError(currentUser(current));
+      if (denied) return { ok: false, error: denied };
+      if (!current.data.clients.some((client) => client.id === input.clientId)) {
+        return { ok: false, error: "That client is not on this sheet." };
+      }
+      let goal: number | null = null;
+      if (input.goalWeightKg !== null) {
+        if (normalizeGoal(input.goalWeightKg) === null) {
+          return { ok: false, error: "Enter a goal between 1 and 400 kg." };
+        }
+        goal = round1(input.goalWeightKg);
+      }
+      commit({
+        ...current,
+        data: {
+          ...current.data,
+          clients: current.data.clients.map((client) =>
+            client.id === input.clientId ? { ...client, goalWeightKg: goal } : client,
+          ),
+        },
       });
       return { ok: true };
     },
@@ -515,6 +547,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     signOut,
     addClient,
     addMeasurement,
+    setGoalWeight,
     addSession,
     assignWorkout,
     startClientWorkout,
