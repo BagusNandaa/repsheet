@@ -28,8 +28,8 @@ export function SessionCard({
               <span className="set-readout shrink-0 text-right text-sm tabular-nums text-muted-foreground dark:inline-flex dark:flex-col dark:items-end">
                 {formatSet(exercise)}
                 <span className="mt-1.5 hidden gap-1 dark:flex" aria-hidden>
-                  {Array.from({ length: Math.min(Math.max(exercise.sets, 0), 16) }, (_, index) => (
-                    <span key={index} className="size-1.5 rounded-full bg-foreground" />
+                  {exercise.sets.slice(0, 16).map((set) => (
+                    <span key={set.id} className="size-1.5 rounded-full bg-foreground" />
                   ))}
                 </span>
               </span>

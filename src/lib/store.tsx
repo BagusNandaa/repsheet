@@ -9,19 +9,24 @@ import {
   type ReactNode,
 } from "react";
 import { isISODate, todayISO } from "@/lib/format";
+import {
+  STORAGE_KEY_V2,
+  expandUniformSets,
+  persistedSheet,
+  readStoredSheet,
+} from "@/lib/migrate";
 import { createSeed } from "@/lib/seed";
 import type {
   AddClientResult,
   AppData,
+  CoachLoggedExercise,
   Measurement,
   Result,
-  SessionExercise,
   SignInResult,
   User,
   WorkoutMove,
 } from "@/lib/types";
 
-const STORAGE_KEY = "repsheet.v1";
 const SESSION_KEY = "repsheet.user";
 
 type Snapshot = {
@@ -54,7 +59,7 @@ type StoreValue = {
     clientId: string;
     date: string;
     title: string;
-    exercises: Array<Omit<SessionExercise, "id">>;
+    exercises: CoachLoggedExercise[];
   }) => Result;
   assignWorkout: (input: {
     clientId: string;
@@ -81,31 +86,12 @@ function emit() {
   for (const listener of listeners) listener();
 }
 
-function persistedSlice(data: AppData) {
-  return {
-    users: data.users,
-    clients: data.clients,
-    measurements: data.measurements,
-    sessions: data.sessions,
-    workouts: data.workouts,
-  };
-}
-
 function loadData(): AppData {
   const seed = createSeed();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return seed;
-    const parsed = JSON.parse(raw) as Partial<AppData>;
-    if (!Array.isArray(parsed.users) || !Array.isArray(parsed.clients)) return seed;
-    return {
-      users: parsed.users,
-      clients: parsed.clients,
-      measurements: Array.isArray(parsed.measurements) ? parsed.measurements : [],
-      sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
-      workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
-      exercises: seed.exercises,
-    };
+    const stored = readStoredSheet(localStorage);
+    if (!stored) return seed;
+    return { ...stored, exercises: seed.exercises };
   } catch {
     return seed;
   }
@@ -144,7 +130,7 @@ function subscribe(listener: () => void) {
 
 function commit(next: Snapshot) {
   snapshot = next;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedSlice(next.data)));
+  localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(persistedSheet(next.data)));
   if (next.userId) localStorage.setItem(SESSION_KEY, next.userId);
   else localStorage.removeItem(SESSION_KEY);
   emit();
@@ -314,7 +300,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       clientId: string;
       date: string;
       title: string;
-      exercises: Array<Omit<SessionExercise, "id">>;
+      exercises: CoachLoggedExercise[];
     }): Result => {
       const current = getSnapshot();
       const denied = coachError(currentUser(current));
@@ -361,10 +347,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               clientId: input.clientId,
               date: input.date,
               title,
+              loggedBy: "coach",
+              workoutId: null,
               exercises: input.exercises.map((exercise) => ({
-                ...exercise,
                 id: crypto.randomUUID(),
-                weightKg: round1(exercise.weightKg),
+                exerciseId: exercise.exerciseId,
+                sets: expandUniformSets(
+                  exercise.sets,
+                  round1(exercise.weightKg),
+                  exercise.reps,
+                  () => crypto.randomUUID(),
+                ),
               })),
             },
           ],

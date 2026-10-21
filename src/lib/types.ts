@@ -28,12 +28,28 @@ export type Measurement = {
   thighCm?: number;
 };
 
+/** Who wrote a session. A migrated v1 sheet was written by the coach. */
+export type LoggedBy = "coach" | "client";
+
+/**
+ * One set inside a logged exercise. Array order is the set order.
+ * Later guided sessions, the rest timer, PRs, and progression read these rows.
+ * Warm-ups stay in the list so that math can skip them.
+ */
+export type SessionSet = {
+  id: string;
+  weightKg: number;
+  reps: number;
+  done: boolean;
+  isWarmup: boolean;
+  /** ISO-8601 time the set was marked done. Null when the sheet has no clock time. */
+  completedAt: string | null;
+};
+
 export type SessionExercise = {
   id: string;
   exerciseId: string;
-  weightKg: number;
-  reps: number;
-  sets: number;
+  sets: SessionSet[];
 };
 
 export type Session = {
@@ -41,8 +57,21 @@ export type Session = {
   clientId: string;
   date: string;
   title: string;
+  loggedBy: LoggedBy;
+  /** Assigned workout this session was performed from, when there is one. */
+  workoutId: string | null;
   exercises: SessionExercise[];
 };
+
+/** What the coach form collects. Saving expands `sets` into one row per set. */
+export type CoachLoggedExercise = {
+  exerciseId: string;
+  weightKg: number;
+  reps: number;
+  sets: number;
+};
+
+export const SHEET_VERSION = 2 as const;
 
 export type WorkoutMove = {
   id: string;
@@ -57,6 +86,16 @@ export type Workout = {
   name: string;
   assignedAt: string;
   moves: WorkoutMove[];
+};
+
+/** Browser sheet. The built-in exercise library is not stored. */
+export type PersistedSheet = {
+  version: typeof SHEET_VERSION;
+  users: User[];
+  clients: Client[];
+  measurements: Measurement[];
+  sessions: Session[];
+  workouts: Workout[];
 };
 
 export type Exercise = {
