@@ -11,7 +11,7 @@
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-fraunces);
   --font-display: var(--font-fraunces);
-  --color-desk: #e4dccb;
+  --color-desk: var(--desk);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -51,6 +51,14 @@
 }
 
 :root {
+  --desk: #e4dccb;
+  /* Brand accent. Rust is the default. Light text can use the fill directly:
+     #9a3e22 is 5.93:1 on the paper background. */
+  --brand-fill: #9a3e22;
+  --brand-ink: #fffaf3;
+  --brand-text: #9a3e22;
+  --brand-soft: rgba(154, 62, 34, 0.12);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --background: #f3efe6;
   --foreground: #1a1814;
   --card: #fffdf8;
@@ -85,38 +93,84 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Green is the optional accent. #32d74b is 1.67:1 on the paper background,
+   so light-mode text and focus use #166324 (6.43:1 on #f3efe6). The fill stays
+   #32d74b with ink #04150a (9.81:1). */
+:root[data-accent="green"]:not(.dark) {
+  --brand-fill: #32d74b;
+  --brand-ink: #04150a;
+  --brand-text: #166324;
+  --brand-soft: rgba(50, 215, 75, 0.18);
+  --primary: #32d74b;
+  --primary-foreground: #04150a;
+  --ring: #166324;
+}
+
+/* Dark surfaces follow openGym: true black, two panels, hairline borders.
+   Rust stays the default accent. #9a3e22 is 3.09:1 on #000 and 2.61:1 on
+   #17181b, so it is fills only. Text and the focus ring use #d4785c
+   (5.61:1 on #17181b, 6.06:1 on #0e0f11, 6.64:1 on #000). Ink on the rust
+   fill is #fffaf3, 6.55:1.
+   #7d7d85 is 4.35:1 on #17181b, short of AA, so it is not a text colour.
+   Secondary text is #a1a1a6 (6.90:1 on #17181b). Primary text is #f5f5f7.
+   --radius 20px maps the scale to 12px / 20px / 28px
+   (rounded-sm / rounded-lg / rounded-xl). */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: dark;
+  --desk: #000000;
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --card: #0e0f11;
+  --card-foreground: #f5f5f7;
+  --popover: #17181b;
+  --popover-foreground: #f5f5f7;
+  --secondary: #17181b;
+  --secondary-foreground: #f5f5f7;
+  --muted: #17181b;
+  --muted-foreground: #a1a1a6;
+  --accent: #17181b;
+  --accent-foreground: #f5f5f7;
+  --destructive: #ff6b5a;
+  --border: rgba(255, 255, 255, 0.11);
+  --input: rgba(255, 255, 255, 0.11);
+  --hair: rgba(255, 255, 255, 0.11);
+  --hair-soft: rgba(255, 255, 255, 0.06);
+  --fg-2: #a1a1a6;
+  --brand-fill: #9a3e22;
+  --brand-ink: #fffaf3;
+  --brand-text: #d4785c;
+  --brand-soft: rgba(154, 62, 34, 0.24);
+  --primary: var(--brand-fill);
+  --primary-foreground: var(--brand-ink);
+  --ring: var(--brand-text);
+  --chart-1: #d4785c;
+  --chart-2: #a1a1a6;
+  --chart-3: #f5f5f7;
+  --chart-4: #9a3e22;
+  --chart-5: #17181b;
+  --radius: 20px;
+  --sidebar: #0e0f11;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: var(--brand-fill);
+  --sidebar-primary-foreground: var(--brand-ink);
+  --sidebar-accent: #17181b;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: rgba(255, 255, 255, 0.11);
+  --sidebar-ring: var(--brand-text);
+}
+
+.dark[data-accent="green"] {
+  --brand-fill: #32d74b;
+  --brand-ink: #04150a;
+  --brand-text: #32d74b;
+  --brand-soft: rgba(50, 215, 75, 0.13);
+  --primary: var(--brand-fill);
+  --primary-foreground: var(--brand-ink);
+  --ring: var(--brand-text);
+  --chart-1: #32d74b;
+  --sidebar-primary: var(--brand-fill);
+  --sidebar-primary-foreground: var(--brand-ink);
+  --sidebar-ring: var(--brand-text);
 }
 
 @layer base {
@@ -125,12 +179,91 @@
   }
   body {
     @apply bg-desk text-foreground;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   html {
     @apply font-sans;
+    color-scheme: light;
   }
   ::selection {
     background: #e7c3b4;
+  }
+}
+
+/* Text utilities share --primary with fills. On dark, and for green on paper,
+   paint the contrast-safe tint instead of the fill. */
+.dark .text-primary,
+:root[data-accent="green"]:not(.dark) .text-primary {
+  color: var(--brand-text);
+}
+
+.dark ::selection {
+  background: var(--brand-soft);
+  color: var(--foreground);
+}
+
+.dark :focus-visible {
+  outline: 2px solid var(--brand-text);
+  outline-offset: 2px;
+}
+
+.dark .app-header {
+  background-color: rgba(0, 0, 0, 0.68);
+  border-bottom-color: var(--hair-soft);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.dark .group\/button {
+  border-radius: 999px;
+}
+
+.dark :is(a, button) {
+  transition-property: color, background-color, border-color, transform, opacity, box-shadow;
+  transition-duration: 0.25s;
+  transition-timing-function: var(--ease);
+}
+
+.dark .group\/button:active {
+  transform: scale(0.975);
+}
+
+.dark .font-display {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.dark .tabular-nums {
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-option[aria-checked="true"],
+.accent-option[aria-checked="true"] {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.accent-option[aria-checked="true"] {
+  color: var(--brand-text);
+  box-shadow: inset 0 0 0 1px var(--brand-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
   }
 }
 
