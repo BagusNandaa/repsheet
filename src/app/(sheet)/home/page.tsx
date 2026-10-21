@@ -4,9 +4,12 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { SessionCard } from "@/components/session-card";
 import { StatsBlock } from "@/components/stats-block";
+import { WeekStrip } from "@/components/week-strip";
 import { EmptyNote, PageIntro, actionClass } from "@/components/sheet-ui";
+import { todayISO } from "@/lib/format";
 import { openClientSessions, sessionProgress } from "@/lib/session-plan";
 import { useStore } from "@/lib/store";
+import { getWeekStripDays } from "@/lib/week-strip";
 import { cn } from "cn";
 
 export default function ClientHomePage() {
@@ -53,6 +56,8 @@ export default function ClientHomePage() {
           </ul>
         </section>
       ) : null}
+
+      <WeekStrip days={getWeekStripDays()} today={todayISO()} />
 
       <section className="flex flex-col gap-4">
         <h2 className="font-display text-2xl">Stats</h2>

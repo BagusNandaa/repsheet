@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dumbbell, House, Library, UserRound, Users } from "lucide-react";
 import { cn } from "cn";
+import { AppearanceControls } from "@/components/appearance-controls";
 import { useStore } from "@/lib/store";
 
 const coachNav = [
@@ -39,22 +40,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background">
       {guided ? null : (
-        <header
-          className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm"
-          style={{ paddingTop: "env(safe-area-inset-top)" }}
-        >
-          <div className="flex h-14 items-center justify-between gap-3 px-4">
-            <Link href={homeHref} className="font-display text-2xl tracking-tight">
-              Repsheet
-            </Link>
-            <p className="truncate text-sm text-muted-foreground">{user?.name}</p>
+        <header className="app-header sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
+          <div
+            className="flex flex-col gap-2 px-4 pt-2 pb-2"
+            style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
+          >
+            <div className="flex h-11 items-center justify-between gap-3">
+              <Link href={homeHref} className="font-display text-2xl tracking-tight">
+                Repsheet
+              </Link>
+              <p className="truncate text-sm text-muted-foreground">{user?.name}</p>
+            </div>
+            <AppearanceControls />
           </div>
         </header>
       )}
       <main
         className={
           guided
-            ? "flex flex-1 flex-col px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+            ? "flex flex-1 flex-col px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:!px-6 dark:!pt-0"
             : "flex flex-1 flex-col px-4 pt-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
         }
       >
@@ -66,8 +70,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           aria-label="Primary"
         >
           <div
-            className="mx-auto flex max-w-lg items-stretch px-1 pt-1"
-            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+            className="mx-auto flex max-w-lg items-stretch pt-1"
+            style={{
+              paddingBottom: "env(safe-area-inset-bottom)",
+              paddingLeft: "max(0.25rem, env(safe-area-inset-left))",
+              paddingRight: "max(0.25rem, env(safe-area-inset-right))",
+            }}
           >
             {items.map((item) => {
               const current = isCurrent(pathname, item.href);

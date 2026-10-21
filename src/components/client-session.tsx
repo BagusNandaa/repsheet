@@ -176,10 +176,10 @@ function SetRow({
   const setLabel = `set ${index + 1}`;
 
   return (
-    <li className="flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+    <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 dark:rounded-none">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-display text-xl">Set {index + 1}</h2>
-        <p className={cn("text-sm", set.done ? "text-primary" : "text-muted-foreground")}>
+        <p className="font-display text-xl">Set {index + 1}</p>
+        <p className={cn("text-sm", set.done ? "text-[var(--brand-text)]" : "text-muted-foreground")}>
           {set.done ? "Done" : "Not logged"}
         </p>
       </div>
@@ -259,10 +259,10 @@ function RestTimerPanel({
     <section
       role="timer"
       aria-label={remaining === null ? "Rest" : `Rest ${clock}`}
-      className="flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10"
+      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 dark:rounded-none"
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-medium text-muted-foreground">Rest</h2>
+        <h2 className="kicker text-sm font-medium text-muted-foreground">Rest</h2>
         <p className="text-sm text-muted-foreground">{status}</p>
       </div>
       <p className="font-display text-6xl tabular-nums tracking-tight" aria-hidden>
@@ -371,7 +371,7 @@ export function ClientSessionScreen({
   return (
     <div className="flex flex-col">
       <header
-        className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/95 px-4 pb-3 backdrop-blur-sm"
+        className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/95 px-4 pb-3 backdrop-blur-sm dark:-mx-6 dark:bg-background dark:px-6 dark:backdrop-blur-none"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
       >
         <BackLink href={backHref}>{workoutName}</BackLink>
@@ -379,23 +379,23 @@ export function ClientSessionScreen({
           <h1 className="font-display text-3xl tracking-tight">
             {libraryExercise?.name ?? "Removed exercise"}
           </h1>
-          <p className="shrink-0 pb-1 text-sm tabular-nums text-muted-foreground">
+          <p className="shrink-0 pb-1 font-display text-sm tabular-nums text-muted-foreground">
             {progress.done}/{progress.total}
           </p>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="kicker mt-1 text-sm text-muted-foreground">
           Exercise {exerciseCount === 0 ? 0 : safeIndex + 1} of {exerciseCount}
           {complete ? " · Session complete" : ""}
         </p>
         <div
-          className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"
+          className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted dark:rounded-none"
           role="progressbar"
           aria-valuenow={progress.done}
           aria-valuemin={0}
           aria-valuemax={progress.total}
           aria-label="Session progress"
         >
-          <div className="h-full bg-primary" style={{ width: `${fraction}%` }} />
+          <div className="h-full bg-[var(--brand-text)]" style={{ width: `${fraction}%` }} />
         </div>
       </header>
 
