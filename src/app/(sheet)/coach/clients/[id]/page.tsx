@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExerciseRecordLinks } from "@/components/exercise-history";
 import { SessionCard } from "@/components/session-card";
 import { StatsBlock } from "@/components/stats-block";
 import { BackLink, EmptyNote, actionClass } from "@/components/sheet-ui";
@@ -58,6 +59,9 @@ export default function ClientSheetPage() {
           <a href="#stats" className="rounded-full bg-muted px-3 py-1.5 text-sm">
             Stats
           </a>
+          <a href="#records" className="rounded-full bg-muted px-3 py-1.5 text-sm">
+            Records
+          </a>
           <a href="#sessions" className="rounded-full bg-muted px-3 py-1.5 text-sm">
             Sessions
           </a>
@@ -93,6 +97,16 @@ export default function ClientSheetPage() {
         >
           Log stats
         </Link>
+      </section>
+
+      <section id="records" className="flex flex-col gap-4">
+        <h2 className="font-display text-2xl">Records</h2>
+        <ExerciseRecordLinks
+          exercises={data.exercises}
+          sessions={data.sessions}
+          clientId={client.id}
+          hrefFor={(exerciseId) => `/coach/clients/${client.id}/exercises/${exerciseId}`}
+        />
       </section>
 
       <section id="sessions" className="flex flex-col gap-4">

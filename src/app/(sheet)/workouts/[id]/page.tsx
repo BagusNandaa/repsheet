@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { VideoPlayer } from "@/components/video-player";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,7 @@ export default function WorkoutDetailPage() {
           const exercise = exerciseById(data.exercises, move.exerciseId);
           return (
             <li key={move.id} className="flex flex-col gap-3">
-              <div>
+              <div className="flex flex-col">
                 <p className="text-sm text-muted-foreground">Move {index + 1}</p>
                 <h2 className="font-display text-2xl">{exercise?.name ?? "Removed exercise"}</h2>
                 <p className="mt-1 text-base tabular-nums">
@@ -83,6 +84,16 @@ export default function WorkoutDetailPage() {
                 {exercise ? (
                   <p className="mt-1 text-sm leading-5 text-muted-foreground">{exercise.cue}</p>
                 ) : null}
+                <Link
+                  href={
+                    user.role === "coach"
+                      ? `/coach/clients/${workout.clientId}/exercises/${move.exerciseId}`
+                      : `/exercises/${move.exerciseId}`
+                  }
+                  className="mt-2 self-start text-sm font-medium text-[var(--brand-text)]"
+                >
+                  History
+                </Link>
               </div>
               {exercise ? (
                 <VideoPlayer exercise={exercise} />

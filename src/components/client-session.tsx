@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BackLink, FormError, actionClass } from "@/components/sheet-ui";
-import { exerciseById } from "@/lib/format";
+import { exerciseById, formatDate, formatKg } from "@/lib/format";
+import { exerciseRecords, formatEstimateKg, personalRecordFlags, type PrFlag } from "@/lib/records";
 import {
   DEFAULT_REST_MS,
   REST_STEP_MS,
@@ -161,11 +162,13 @@ function SetRow({
   set,
   index,
   sessionId,
+  flags,
   onUpdate,
 }: {
   set: SessionSet;
   index: number;
   sessionId: string;
+  flags: PrFlag[];
   onUpdate: (patch: { weightKg?: number; reps?: number; done?: boolean }) => Result;
 }) {
   const [weightText, setWeightText] = useState<string | null>(null);
@@ -183,6 +186,11 @@ function SetRow({
           {set.done ? "Done" : "Not logged"}
         </p>
       </div>
+      {flags.length > 0 ? (
+        <p className="text-sm font-medium text-[var(--brand-text)]" role="status">
+          PR · {flags.map((flag) => flag.label).join(" · ")}
+        </p>
+      ) : null}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Stepper
           id={`weight-${set.id}`}
@@ -352,6 +360,9 @@ export function ClientSessionScreen({
         exercise.exerciseId,
       )
     : null;
+  const records = exercise
+    ? exerciseRecords(history, clientId, exercise.exerciseId)
+    : null;
   const complete = progress.total > 0 && progress.done === progress.total;
   const fraction = progress.total === 0 ? 0 : (progress.done / progress.total) * 100;
   const backHref = session.workoutId ? `/workouts/${session.workoutId}` : "/workouts";
@@ -414,6 +425,21 @@ export function ClientSessionScreen({
                 : "No earlier session for this move. Weight and reps start from the workout target."}
               {libraryExercise ? ` ${libraryExercise.cue}` : ""}
             </p>
+            {records?.estimated1Rm ? (
+              <p className="text-sm text-muted-foreground tabular-nums">
+                Estimated 1RM {formatEstimateKg(records.estimated1Rm.e1rmKg)} from{" "}
+                {formatKg(records.estimated1Rm.weightKg)} × {records.estimated1Rm.reps} on{" "}
+                {formatDate(records.estimated1Rm.date)}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No estimated 1RM yet.</p>
+            )}
+            <Link
+              href={`/exercises/${exercise.exerciseId}`}
+              className="self-start text-sm font-medium text-[var(--brand-text)]"
+            >
+              History
+            </Link>
             <ol className="flex flex-col gap-3">
               {exercise.sets.map((set, index) => (
                 <SetRow
@@ -421,6 +447,13 @@ export function ClientSessionScreen({
                   set={set}
                   index={index}
                   sessionId={session.id}
+                  flags={personalRecordFlags({
+                    sessions: history,
+                    clientId,
+                    exerciseId: exercise.exerciseId,
+                    sessionId: session.id,
+                    setId: set.id,
+                  })}
                   onUpdate={(patch) => onUpdateSet({ setId: set.id, ...patch })}
                 />
               ))}

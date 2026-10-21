@@ -70,6 +70,8 @@ The week starts on Monday or Sunday. That setting is stored on the sheet. Home u
 
 Home shows today's workout, and Start opens the guided session. On a rest day it names the next training day in the following 21 days, after skips and moves. The week strip marks a day done when that date has a logged working set, and planned when the plan plus overrides put a workout there. A day that is both is done. Today is highlighted. Warm-up-only rows do not mark a day done.
 
+Estimated 1RM and personal records are computed from the saved sets. They are not a new stored field. The estimate uses Epley: weight × (1 + reps / 30), including a single. A set counts only when it is marked done, is not a warm-up, has a load above 0 kg, and has 1 to 12 reps. Sets above 12 reps are never used. The estimate names the set it came from (date, weight × reps). When two sets tie, the earlier one is kept: earlier date, then the session saved first, then the earlier set in that session. The other records are the heaviest weight and the most reps at a given weight. While a client logs, a set that strictly beats one of those shows a PR flag. Matching the current best does not. Home and the client sheet both link to an exercise history with the best set and the recent sessions.
+
 ## Out of scope
 
 Coach-uploaded clips, YouTube links, payments, a native app, and deployment.
