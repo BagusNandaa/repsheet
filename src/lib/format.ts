@@ -28,8 +28,14 @@ export function formatWeightChange(latest: number, previous: number) {
   return `${signed} kg`;
 }
 
-export function formatSet(exercise: Pick<SessionExercise, "sets" | "reps" | "weightKg">) {
-  return `${exercise.sets} × ${exercise.reps} · ${formatKg(exercise.weightKg)}`;
+export function formatSet(exercise: Pick<SessionExercise, "sets">) {
+  const first = exercise.sets[0];
+  if (!first) return "No sets";
+  const uniform = exercise.sets.every(
+    (set) => set.weightKg === first.weightKg && set.reps === first.reps,
+  );
+  if (uniform) return `${exercise.sets.length} × ${first.reps} · ${formatKg(first.weightKg)}`;
+  return exercise.sets.map((set) => `${set.reps} × ${formatKg(set.weightKg)}`).join(", ");
 }
 
 export function exerciseById(exercises: Exercise[], id: string) {
