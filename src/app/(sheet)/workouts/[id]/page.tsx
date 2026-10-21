@@ -1,15 +1,20 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { VideoPlayer } from "@/components/video-player";
-import { BackLink, EmptyNote } from "@/components/sheet-ui";
+import { Button } from "@/components/ui/button";
+import { BackLink, EmptyNote, FormError, actionClass } from "@/components/sheet-ui";
 import { exerciseById, formatDate } from "@/lib/format";
+import { openClientSession } from "@/lib/session-plan";
 import { useStore } from "@/lib/store";
 
 export default function WorkoutDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { data, user } = useStore();
+  const { data, user, startClientWorkout } = useStore();
+  const router = useRouter();
+  const [startError, setStartError] = useState<string | null>(null);
   if (!data || !user || !id) return null;
 
   const workout = data.workouts.find((item) => item.id === id);
@@ -28,6 +33,10 @@ export default function WorkoutDetailPage() {
   const client = data.clients.find((item) => item.id === workout.clientId);
   const backHref = user.role === "coach" ? `/coach/clients/${workout.clientId}` : "/workouts";
   const backLabel = user.role === "coach" ? (client?.name ?? "Client") : "Workouts";
+  const openSession =
+    user.role === "client" && user.clientId
+      ? openClientSession(data.sessions, user.clientId, workout.id)
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,6 +48,27 @@ export default function WorkoutDetailPage() {
           {user.role === "coach" && client ? ` · ${client.name}` : ""}
         </p>
       </div>
+      {user.role === "client" ? (
+        <>
+          <Button
+            type="button"
+            className={actionClass}
+            onClick={() => {
+              if (!openSession) {
+                const result = startClientWorkout(workout.id);
+                if (!result.ok) {
+                  setStartError(result.error);
+                  return;
+                }
+              }
+              router.push(`/workouts/${workout.id}/session`);
+            }}
+          >
+            {openSession ? "Continue session" : "Start session"}
+          </Button>
+          <FormError>{startError}</FormError>
+        </>
+      ) : null}
       <ol className="flex flex-col gap-8">
         {workout.moves.map((move, index) => {
           const exercise = exerciseById(data.exercises, move.exerciseId);

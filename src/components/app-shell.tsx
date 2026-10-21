@@ -26,63 +26,78 @@ function isCurrent(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function isGuidedSession(pathname: string) {
+  return /^\/workouts\/[^/]+\/session$/.test(pathname);
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useStore();
   const items = user?.role === "coach" ? coachNav : clientNav;
   const homeHref = user?.role === "coach" ? "/coach" : "/home";
+  const guided = isGuidedSession(pathname);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background">
-      <header className="app-header sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div
-          className="flex flex-col gap-2 px-4 pt-2 pb-2"
-          style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
-        >
-          <div className="flex h-11 items-center justify-between gap-3">
-            <Link href={homeHref} className="font-display text-2xl tracking-tight">
-              Repsheet
-            </Link>
-            <p className="truncate text-sm text-muted-foreground">{user?.name}</p>
+      {guided ? null : (
+        <header className="app-header sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
+          <div
+            className="flex flex-col gap-2 px-4 pt-2 pb-2"
+            style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
+          >
+            <div className="flex h-11 items-center justify-between gap-3">
+              <Link href={homeHref} className="font-display text-2xl tracking-tight">
+                Repsheet
+              </Link>
+              <p className="truncate text-sm text-muted-foreground">{user?.name}</p>
+            </div>
+            <AppearanceControls />
           </div>
-          <AppearanceControls />
-        </div>
-      </header>
-      <main className="flex flex-1 flex-col px-4 pt-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
+        </header>
+      )}
+      <main
+        className={
+          guided
+            ? "flex flex-1 flex-col px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:!px-6 dark:!pt-0"
+            : "flex flex-1 flex-col px-4 pt-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
+        }
+      >
         {children}
       </main>
-      <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur-sm"
-        aria-label="Primary"
-      >
-        <div
-          className="mx-auto flex max-w-lg items-stretch pt-1"
-          style={{
-            paddingBottom: "env(safe-area-inset-bottom)",
-            paddingLeft: "max(0.25rem, env(safe-area-inset-left))",
-            paddingRight: "max(0.25rem, env(safe-area-inset-right))",
-          }}
+      {guided ? null : (
+        <nav
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur-sm"
+          aria-label="Primary"
         >
-          {items.map((item) => {
-            const current = isCurrent(pathname, item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={current ? "page" : undefined}
-                className={cn(
-                  "flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium",
-                  current ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                <Icon className="size-5" aria-hidden />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+          <div
+            className="mx-auto flex max-w-lg items-stretch pt-1"
+            style={{
+              paddingBottom: "env(safe-area-inset-bottom)",
+              paddingLeft: "max(0.25rem, env(safe-area-inset-left))",
+              paddingRight: "max(0.25rem, env(safe-area-inset-right))",
+            }}
+          >
+            {items.map((item) => {
+              const current = isCurrent(pathname, item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={current ? "page" : undefined}
+                  className={cn(
+                    "flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium",
+                    current ? "text-primary" : "text-muted-foreground",
+                  )}
+                >
+                  <Icon className="size-5" aria-hidden />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

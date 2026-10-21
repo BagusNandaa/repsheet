@@ -58,7 +58,7 @@ export default function LoginPage() {
       <p className="text-sm font-medium tracking-wide text-primary uppercase">One coach</p>
       <h1 className="mt-2 font-display text-5xl tracking-tight">Repsheet</h1>
       <p className="mt-3 max-w-sm text-base leading-6 text-muted-foreground">
-        Stats, sessions, and example videos. The coach writes. Clients only look.
+        Stats, sessions, and example videos. The coach assigns the work. Clients log their own sets.
       </p>
 
       <section className="mt-8 flex flex-col gap-3" aria-label="People on this device">

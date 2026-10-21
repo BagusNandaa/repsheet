@@ -16,6 +16,7 @@ import {
   readStoredSheet,
 } from "@/lib/migrate";
 import { createSeed } from "@/lib/seed";
+import { applyClientSetUpdate, planClientSession } from "@/lib/session-plan";
 import type {
   AddClientResult,
   AppData,
@@ -23,6 +24,7 @@ import type {
   Measurement,
   Result,
   SignInResult,
+  StartWorkoutResult,
   User,
   WorkoutMove,
 } from "@/lib/types";
@@ -65,6 +67,14 @@ type StoreValue = {
     clientId: string;
     name: string;
     moves: Array<Omit<WorkoutMove, "id">>;
+  }) => Result;
+  startClientWorkout: (workoutId: string) => StartWorkoutResult;
+  updateClientSet: (input: {
+    sessionId: string;
+    setId: string;
+    weightKg?: number;
+    reps?: number;
+    done?: boolean;
   }) => Result;
   resetDemo: () => void;
 };
@@ -422,6 +432,70 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const startClientWorkout = useCallback((workoutId: string): StartWorkoutResult => {
+    const current = getSnapshot();
+    const user = currentUser(current);
+    if (!user || user.role !== "client" || !user.clientId) {
+      return { ok: false, error: "Only a client can log a session." };
+    }
+    const workout = current.data.workouts.find((item) => item.id === workoutId);
+    if (!workout || workout.clientId !== user.clientId) {
+      return { ok: false, error: "That workout is not on your sheet." };
+    }
+    const planned = planClientSession({
+      clientId: user.clientId,
+      workout,
+      sessions: current.data.sessions,
+      date: todayISO(),
+      createId: () => crypto.randomUUID(),
+    });
+    if (planned.created) {
+      commit({
+        ...current,
+        data: { ...current.data, sessions: [...current.data.sessions, planned.session] },
+      });
+    }
+    return { ok: true, sessionId: planned.session.id };
+  }, []);
+
+  const updateClientSet = useCallback(
+    (input: {
+      sessionId: string;
+      setId: string;
+      weightKg?: number;
+      reps?: number;
+      done?: boolean;
+    }): Result => {
+      const current = getSnapshot();
+      const user = currentUser(current);
+      if (!user || user.role !== "client" || !user.clientId) {
+        return { ok: false, error: "Only a client can log a set." };
+      }
+      const session = current.data.sessions.find((item) => item.id === input.sessionId);
+      if (!session || session.clientId !== user.clientId) {
+        return { ok: false, error: "That session is not on your sheet." };
+      }
+      const patch: { weightKg?: number; reps?: number; done?: boolean } = {};
+      if (input.weightKg !== undefined) patch.weightKg = input.weightKg;
+      if (input.reps !== undefined) patch.reps = input.reps;
+      if (input.done !== undefined) patch.done = input.done;
+      const updated = applyClientSetUpdate(
+        current.data.sessions,
+        input.sessionId,
+        input.setId,
+        patch,
+        new Date().toISOString(),
+      );
+      if (!updated.ok) return updated;
+      commit({
+        ...current,
+        data: { ...current.data, sessions: updated.sessions },
+      });
+      return { ok: true };
+    },
+    [],
+  );
+
   const resetDemo = useCallback(() => {
     const current = getSnapshot();
     const seed = createSeed();
@@ -443,6 +517,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addMeasurement,
     addSession,
     assignWorkout,
+    startClientWorkout,
+    updateClientSet,
     resetDemo,
   };
 
