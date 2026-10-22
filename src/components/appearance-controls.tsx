@@ -43,7 +43,7 @@ function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="flex rounded-full bg-muted p-0.5"
+      className="flex max-w-full flex-wrap rounded-full bg-muted p-0.5"
       onKeyDown={(event) => {
         const index = options.findIndex((option) => option.value === value);
         if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -92,7 +92,7 @@ export function AppearanceControls() {
   const { mode, accent, setMode, setAccent } = useTheme();
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
       <Segmented
         label="Theme"
         value={mode}

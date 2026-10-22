@@ -148,11 +148,11 @@ export function ExerciseRecordLinks({
           <li key={id}>
             <Link
               href={hrefFor(id)}
-              className="flex min-h-16 items-center justify-between gap-3 px-4 py-3 active:bg-accent"
+              className="flex min-h-16 min-w-0 items-center justify-between gap-3 px-4 py-3 active:bg-accent"
             >
-              <span>
-                <span className="block text-base font-medium">{exerciseName(exercises, id)}</span>
-                <span className="block text-sm text-muted-foreground tabular-nums">{detail}</span>
+              <span className="min-w-0">
+                <span className="block text-base font-medium break-words">{exerciseName(exercises, id)}</span>
+                <span className="block text-sm text-muted-foreground break-words tabular-nums">{detail}</span>
               </span>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             </Link>

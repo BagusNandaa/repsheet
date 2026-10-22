@@ -463,9 +463,14 @@
   --heatmap-4: var(--brand-text);
   --heatmap-cell: 0.8rem;
   --heatmap-gap: 3px;
+  /* Flex item default min-width is the year grid. Keep the card the parent width. */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .heatmap-scroll {
+  position: relative;
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
   padding: 2px 2px 0.35rem;
@@ -517,6 +522,9 @@
 }
 
 .heatmap-cell {
+  /* The day name is position:absolute. The cell has to be its containing
+     block, or that label escapes the scroller and widens the page. */
+  position: relative;
   width: var(--heatmap-cell);
   height: var(--heatmap-cell);
   min-width: 0;

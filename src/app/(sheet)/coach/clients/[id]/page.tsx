@@ -47,7 +47,7 @@ export default function ClientSheetPage() {
   const today = todayISO();
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex min-w-0 flex-col gap-8">
       <div className="flex flex-col gap-3">
         <BackLink href="/coach">Clients</BackLink>
         <div>

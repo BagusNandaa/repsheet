@@ -81,20 +81,20 @@ export function ActivityPanel({
   }
 
   return (
-    <section id={id} className="flex flex-col gap-4" aria-labelledby={headingId}>
+    <section id={id} className="flex min-w-0 flex-col gap-4" aria-labelledby={headingId}>
       <h2 id={headingId} className="font-display text-2xl">
         Training
       </h2>
       <dl className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-muted px-3 py-2">
+        <div className="min-w-0 rounded-lg bg-muted px-3 py-2">
           <dt className="text-sm text-muted-foreground">Week streak</dt>
           <dd className="font-display text-3xl tabular-nums">{streaks.consecutiveWeeks}</dd>
         </div>
-        <div className="rounded-lg bg-muted px-3 py-2">
+        <div className="min-w-0 rounded-lg bg-muted px-3 py-2">
           <dt className="text-sm text-muted-foreground">This week</dt>
           <dd className="font-display text-3xl tabular-nums">{streaks.workoutsThisWeek}</dd>
         </div>
-        <div className="rounded-lg bg-muted px-3 py-2">
+        <div className="min-w-0 rounded-lg bg-muted px-3 py-2">
           <dt className="text-sm text-muted-foreground">Total</dt>
           <dd className="font-display text-3xl tabular-nums">{streaks.totalWorkouts}</dd>
         </div>
