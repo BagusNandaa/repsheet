@@ -34,7 +34,7 @@ export function StatsBlock({
     <div className="flex flex-col gap-4">
       <div>
         <p className="kicker text-sm text-muted-foreground">Weight · {formatDate(latest.date)}</p>
-        <p className="font-display text-5xl tracking-tight break-words tabular-nums">
+        <p className="font-display text-4xl tracking-tight whitespace-nowrap tabular-nums min-[360px]:text-5xl">
           {formatKg(latest.weightKg)}
         </p>
         {previous ? (

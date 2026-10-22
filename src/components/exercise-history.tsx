@@ -28,14 +28,14 @@ export function ExerciseHistoryView({ history }: { history: ExerciseHistory }) {
         {estimate ? (
           <div>
             <p className="kicker text-sm text-muted-foreground">Estimated 1RM</p>
-            <p className="font-display text-5xl tracking-tight tabular-nums">
+            <p className="font-display text-4xl tracking-tight whitespace-nowrap tabular-nums min-[360px]:text-5xl">
               {formatEstimateKg(estimate.e1rmKg)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground tabular-nums">{sourceLine(estimate)}</p>
           </div>
         ) : heaviest ? (
           <div>
-            <p className="font-display text-5xl tracking-tight tabular-nums">
+            <p className="font-display text-4xl tracking-tight whitespace-nowrap tabular-nums min-[360px]:text-5xl">
               {formatKg(heaviest.weightKg)} × {heaviest.reps}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{formatDate(heaviest.date)}</p>

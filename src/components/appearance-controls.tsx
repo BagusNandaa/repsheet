@@ -43,7 +43,7 @@ function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="flex max-w-full flex-wrap rounded-full bg-muted p-0.5"
+      className="flex max-w-full rounded-full bg-muted p-0.5"
       onKeyDown={(event) => {
         const index = options.findIndex((option) => option.value === value);
         if (event.key === "ArrowRight" || event.key === "ArrowDown") {
