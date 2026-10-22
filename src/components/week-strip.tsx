@@ -36,14 +36,14 @@ export function WeekStrip({ days, today }: { days: WeekStripDay[]; today: string
             month: "long",
           }).format(date);
           return (
-            <li key={day.date} className="flex flex-col items-center gap-1">
-              <span className="text-[11px] font-medium tracking-[0.06em] text-muted-foreground uppercase">
+            <li key={day.date} className="flex min-w-0 flex-col items-center gap-1">
+              <span className="max-w-full text-[11px] font-medium tracking-[0.06em] text-muted-foreground uppercase">
                 {weekdayLetters[date.getDay()]}
               </span>
               <span
                 className={cn(
-                  "week-day flex size-9 items-center justify-center rounded-full text-sm font-semibold tracking-[-0.03em] tabular-nums",
-                  "dark:size-10 dark:rounded-none dark:font-normal dark:tracking-[0.04em]",
+                  "week-day relative flex aspect-square w-full max-w-9 items-center justify-center rounded-full text-sm font-semibold tracking-[-0.03em] tabular-nums",
+                  "dark:max-w-10 dark:rounded-none dark:font-normal dark:tracking-[0.04em]",
                   current
                     ? "bg-primary text-primary-foreground dark:bg-transparent dark:text-foreground dark:shadow-[inset_0_0_0_1px_var(--brand-text)]"
                     : "text-foreground",

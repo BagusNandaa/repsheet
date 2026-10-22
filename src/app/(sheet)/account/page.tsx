@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AppearanceControls } from "@/components/appearance-controls";
 import { BackupControls } from "@/components/backup-controls";
 import { PageIntro, actionClass } from "@/components/sheet-ui";
 import { useStore } from "@/lib/store";
@@ -47,18 +48,26 @@ export default function AccountPage() {
   if (!user) return null;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <PageIntro title="You">
         {user.role === "coach"
           ? "You can add clients, log stats and sessions, assign workouts, and set the week."
           : "You log your own sets. Your coach still records weight and measurements."}
       </PageIntro>
       <div className="rounded-xl bg-card px-4 py-4 ring-1 ring-foreground/10">
-        <p className="font-display text-2xl">{user.name}</p>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="font-display text-2xl break-words">{user.name}</p>
+        <p className="mt-1 text-sm break-words text-muted-foreground">
           {user.role === "coach" ? "Coach" : "Client"} · {user.email}
         </p>
       </div>
+
+      <section className="flex min-w-0 flex-col gap-3">
+        <h2 className="font-display text-2xl">Appearance</h2>
+        <p className="text-base leading-6 text-muted-foreground">
+          Theme and accent are saved on this device.
+        </p>
+        <AppearanceControls />
+      </section>
 
       <BackupControls />
       {data ? (

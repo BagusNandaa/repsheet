@@ -34,7 +34,7 @@ export function StatsBlock({
     <div className="flex flex-col gap-4">
       <div>
         <p className="kicker text-sm text-muted-foreground">Weight · {formatDate(latest.date)}</p>
-        <p className="font-display text-5xl tracking-tight tabular-nums">
+        <p className="font-display text-4xl tracking-tight whitespace-nowrap tabular-nums min-[360px]:text-5xl">
           {formatKg(latest.weightKg)}
         </p>
         {previous ? (
@@ -75,7 +75,7 @@ export function StatsBlock({
         {tapes.map(([label, key]) => {
           const value = latest[key];
           return (
-            <div key={key} className="rounded-lg bg-muted px-3 py-2">
+            <div key={key} className="min-w-0 rounded-lg bg-muted px-3 py-2">
               <dt className="text-sm text-muted-foreground">{label}</dt>
               <dd className="font-display text-2xl tabular-nums">
                 {value ?? "—"}

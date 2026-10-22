@@ -34,7 +34,7 @@ export function TodayCard({
       >
         Today
       </h2>
-      <p className="mt-3 font-display text-3xl tracking-tight">
+      <p className="mt-3 font-display text-3xl tracking-tight break-words">
         {workout ? workout.name : "Rest day"}
       </p>
       {workout ? (

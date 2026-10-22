@@ -13,6 +13,7 @@ import {
   isAccent,
   isDarkMode,
   isThemeMode,
+  persistTheme,
   readThemePreference,
 } from "./theme.ts";
 
@@ -134,4 +135,76 @@ test("missing preference resolves to dark and green, outside the data store", ()
       globalThis.localStorage = previous;
     }
   }
+});
+
+test("theme and accent choices persist under the same storage keys", () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
+    },
+    clear: () => values.clear(),
+    key: (index: number) => [...values.keys()][index] ?? null,
+    get length() {
+      return values.size;
+    },
+  };
+  const root = {
+    classList: { toggle() {} },
+    dataset: {} as Record<string, string>,
+    style: {} as { colorScheme?: string },
+  };
+  const previousWindow = globalThis.window;
+  const previousDocument = globalThis.document;
+  const previousStorage = globalThis.localStorage;
+  globalThis.localStorage = storage as unknown as Storage;
+  Object.assign(globalThis, {
+    window: { matchMedia: () => ({ matches: true }) },
+    document: { documentElement: root, querySelector: () => null },
+  });
+  try {
+    persistTheme("light", "rust");
+    assert.equal(values.get(THEME_STORAGE_KEY), "light");
+    assert.equal(values.get(ACCENT_STORAGE_KEY), "rust");
+    assert.deepEqual(readThemePreference(), { mode: "light", accent: "rust" });
+    assert.equal(root.dataset.theme, "light");
+    assert.equal(root.dataset.accent, "rust");
+    persistTheme("system", "green");
+    assert.equal(values.get(THEME_STORAGE_KEY), "system");
+    assert.equal(values.get(ACCENT_STORAGE_KEY), "green");
+    assert.deepEqual(readThemePreference(), { mode: "system", accent: "green" });
+    assert.equal(root.dataset.accent, "green");
+    assert.equal(THEME_STORAGE_KEY, "repsheet.theme");
+    assert.equal(ACCENT_STORAGE_KEY, "repsheet.accent");
+  } finally {
+    if (previousWindow === undefined) delete (globalThis as { window?: Window }).window;
+    else globalThis.window = previousWindow;
+    if (previousDocument === undefined) delete (globalThis as { document?: Document }).document;
+    else globalThis.document = previousDocument;
+    if (previousStorage === undefined) {
+      delete (globalThis as { localStorage?: Storage }).localStorage;
+    } else {
+      globalThis.localStorage = previousStorage;
+    }
+  }
+});
+
+test("theme controls sit on You and not in the home header", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+  const shell = readFileSync(join(root, "components/app-shell.tsx"), "utf8");
+  const account = readFileSync(join(root, "app/(sheet)/account/page.tsx"), "utf8");
+  assert.equal(shell.includes("AppearanceControls"), false);
+  assert.equal(account.includes("<AppearanceControls />"), true);
+});
+
+test("the year heatmap scrolls inside itself instead of widening the page", () => {
+  assert.match(css, /\.heatmap\s*\{[^}]*min-width:\s*0/);
+  assert.match(css, /\.heatmap-scroll\s*\{[^}]*min-width:\s*0/);
+  assert.match(css, /\.heatmap-scroll\s*\{[^}]*overflow-x:\s*auto/);
+  assert.match(css, /\.heatmap-scroll\s*\{[^}]*position:\s*relative/);
+  assert.match(css, /\.heatmap-cell\s*\{[^}]*position:\s*relative/);
 });

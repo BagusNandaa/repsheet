@@ -13,6 +13,17 @@ npm run dev
 
 Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
+## Tests
+
+```bash
+npm test
+npm run test:e2e
+```
+
+`npm test` runs the unit tests. It does not start the app and does not need Chrome.
+
+`npm run test:e2e` checks that Home, the coach list, You, and a client sheet do not scroll sideways at 320, 360, and 768px. It needs Google Chrome on `PATH`. If nothing is already serving [http://127.0.0.1:43123](http://127.0.0.1:43123), the script starts `next dev` on port 44721.
+
 ## Demo sign-in
 
 | Person | Role | Email | Password |

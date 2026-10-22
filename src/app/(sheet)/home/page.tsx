@@ -63,7 +63,7 @@ export default function ClientHomePage() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex min-w-0 flex-col gap-8">
       <PageIntro title={`Hello, ${firstName}`}>
         {coach ? `${coach.name} keeps your stats.` : "Your coach keeps your stats."} You log your
         own sets.

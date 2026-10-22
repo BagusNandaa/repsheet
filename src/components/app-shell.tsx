@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dumbbell, House, Library, UserRound, Users } from "lucide-react";
 import { cn } from "cn";
-import { AppearanceControls } from "@/components/appearance-controls";
 import { useStore } from "@/lib/store";
 
 const coachNav = [
@@ -42,24 +41,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {guided ? null : (
         <header className="app-header sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
           <div
-            className="flex flex-col gap-2 px-4 pt-2 pb-2"
+            className="px-4 pt-2 pb-2"
             style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
           >
-            <div className="flex h-11 items-center justify-between gap-3">
-              <Link href={homeHref} className="font-display text-2xl tracking-tight">
+            <div className="flex h-11 min-w-0 items-center justify-between gap-3">
+              <Link href={homeHref} className="shrink-0 font-display text-2xl tracking-tight">
                 Repsheet
               </Link>
-              <p className="truncate text-sm text-muted-foreground">{user?.name}</p>
+              <p className="min-w-0 truncate text-sm text-muted-foreground">{user?.name}</p>
             </div>
-            <AppearanceControls />
           </div>
         </header>
       )}
       <main
         className={
           guided
-            ? "flex flex-1 flex-col px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:!px-6 dark:!pt-0"
-            : "flex flex-1 flex-col px-4 pt-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
+            ? "flex min-w-0 flex-1 flex-col px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:!px-6 dark:!pt-0"
+            : "flex min-w-0 flex-1 flex-col px-4 pt-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
         }
       >
         {children}
