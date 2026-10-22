@@ -2,7 +2,7 @@
 
 A progressive web app for one fitness coach and their clients. The coach logs body stats and assigns workouts. Clients log their own workouts set by set (decision 2026-10-21). Each move uses a built-in example video.
 
-Sheets are saved in the browser on this device. There is no server account and nothing is deployed.
+Sheets are saved in the browser on this device. There is no server account.
 
 ## Run locally
 
@@ -12,6 +12,38 @@ npm run dev
 ```
 
 Open [http://127.0.0.1:43123](http://127.0.0.1:43123).
+
+## Deploy to Cloudflare
+
+Repsheet does not use route handlers, server actions, middleware, request headers, or rewrites. `next build` writes a static site to `out/`. Cloudflare serves those files. Sheets stay in this browser.
+
+Dynamic pages (`/coach/clients/client-jordan`, `/exercises/ex-back-squat`, and the other id URLs) are one HTML shell each. `public/_redirects` serves that shell for any id, including ones created on the device. A trailing slash redirects to the path without one (`/home/` to `/home`, `/exercises/ex-back-squat/` to `/exercises/ex-back-squat`). A path that is not a page serves `404.html`.
+
+### Dashboard
+
+In the Cloudflare dashboard, go to **Workers & Pages** → **Create** → **Pages** → **Import an existing Git repository**. Choose this repo and set:
+
+| Setting | Value |
+| --- | --- |
+| Production branch | `main` |
+| Framework preset | Next.js (Static HTML Export) |
+| Build command | `npm run build` |
+| Build output directory | `out` |
+| Node.js version | `22` |
+
+The Next.js (Static HTML Export) preset uses build command `npx next build` and output directory `out`. Set the build command to `npm run build`. That script runs `next build`.
+
+Node 22 is the Pages default. This repo also has `.node-version` set to `22`. To pin it in the dashboard, add the environment variable `NODE_VERSION` = `22` under **Settings** → **Environment variables**.
+
+### From your machine
+
+```bash
+npx wrangler login
+npm run build
+npx wrangler deploy
+```
+
+`npm run deploy` does the build and the deploy. `npm run preview` serves the `out/` directory locally with Wrangler (http://127.0.0.1:8787) after `npm run build`. No account id or secret is stored in the repo. Wrangler uses the login on that machine.
 
 ## Demo sign-in
 
@@ -96,4 +128,4 @@ Replace makes this device's `repsheet.*` keys match the file after migration. Ke
 
 ## Out of scope
 
-Coach-uploaded clips, YouTube links, payments, a native app, and deployment.
+Coach-uploaded clips, YouTube links, payments, and a native app.

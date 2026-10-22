@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "repsheet",
+  "compatibility_date": "2026-10-22",
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  },
+  "assets": {
+    "directory": "./out",
+    // Next writes `/home.html`. `/home` serves that file; `/home/` redirects to `/home`.
+    "html_handling": "auto-trailing-slash",
+    // Unknown paths serve `out/404.html` from the static export.
+    "not_found_handling": "404-page"
+  }
+}

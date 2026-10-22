@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { VideoPlayer } from "@/components/video-player";
 import { Button } from "@/components/ui/button";
 import { BackLink, EmptyNote, FormError, actionClass } from "@/components/sheet-ui";
@@ -10,6 +10,7 @@ import { ProgressionEditor } from "@/components/progression-editor";
 import { exerciseById, formatDate, formatKg } from "@/lib/format";
 import { progressionSummary } from "@/lib/progression";
 import { exerciseTarget, openClientSession } from "@/lib/session-plan";
+import { useSheetParams } from "@/lib/use-sheet-params";
 import { useStore } from "@/lib/store";
 import type { Session, Workout, WorkoutMove } from "@/lib/types";
 
@@ -41,8 +42,7 @@ function MoveTarget({
 }
 
 export default function WorkoutDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { id } = useSheetParams();
   const { data, user, startClientWorkout, saveWorkoutProgression } = useStore();
   const router = useRouter();
   const [startError, setStartError] = useState<string | null>(null);

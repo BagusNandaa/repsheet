@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useSheetParams } from "@/lib/use-sheet-params";
 import { ClientSessionScreen } from "@/components/client-session";
 import { Button } from "@/components/ui/button";
 import { BackLink, EmptyNote, PageIntro, actionClass } from "@/components/sheet-ui";
@@ -10,8 +10,7 @@ import { workoutHasTarget } from "@/lib/progression";
 import { useStore } from "@/lib/store";
 
 export default function WorkoutSessionPage() {
-  const params = useParams<{ id: string }>();
-  const workoutId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { id: workoutId } = useSheetParams();
   const { data, user, startClientWorkout, updateClientSet } = useStore();
   const [startError, setStartError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);

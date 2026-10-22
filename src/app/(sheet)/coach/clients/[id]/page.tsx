@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSheetParams } from "@/lib/use-sheet-params";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActivityPanel } from "@/components/activity-panel";
@@ -17,8 +17,7 @@ import { readGoalWeight } from "@/lib/weight-goal";
 import { cn } from "cn";
 
 export default function ClientSheetPage() {
-  const params = useParams<{ id: string }>();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { id } = useSheetParams();
   const { data, setGoalWeight } = useStore();
   if (!data || !id) return null;
 

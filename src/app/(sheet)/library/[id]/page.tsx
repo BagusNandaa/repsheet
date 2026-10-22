@@ -1,14 +1,13 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import Link from "next/link";
 import { VideoPlayer } from "@/components/video-player";
 import { BackLink, EmptyNote } from "@/components/sheet-ui";
+import { useSheetParams } from "@/lib/use-sheet-params";
 import { useStore } from "@/lib/store";
 
 export default function ExercisePage() {
-  const params = useParams<{ id: string }>();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { id } = useSheetParams();
   const { data, user } = useStore();
   if (!data || !id) return null;
 
