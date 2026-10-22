@@ -1,0 +1,56 @@
+# Dynamic ids are created in the browser, so each route is one static shell.
+# A trailing slash redirects to the canonical path. Real files such as /home/
+# are handled by html_handling. 200 rewrites keep the id in the address bar.
+# /coach/clients/new is a real page and must win over :id.
+# Static rules come first so they are not shadowed by placeholders.
+
+/coach/clients/new.txt /coach/clients/new.txt 200
+/coach/clients/new /coach/clients/new 200
+
+/workouts/:id/session/ /workouts/:id/session 307
+/coach/clients/:id/exercises/:exerciseId/ /coach/clients/:id/exercises/:exerciseId 307
+/coach/clients/:id/session/ /coach/clients/:id/session 307
+/coach/clients/:id/workout/ /coach/clients/:id/workout 307
+/coach/clients/:id/measure/ /coach/clients/:id/measure 307
+/workouts/:id/ /workouts/:id 307
+/exercises/:id/ /exercises/:id 307
+/library/:id/ /library/:id 307
+/coach/clients/:id/ /coach/clients/:id 307
+
+/coach/clients/new/* /coach/clients/new/:splat 200
+
+/workouts/:id/session/* /workouts/placeholder/session/:splat 200
+/workouts/:id/session.txt /workouts/placeholder/session.txt 200
+/workouts/:id/session /workouts/placeholder/session 200
+
+/workouts/:id/* /workouts/placeholder/:splat 200
+/workouts/:id.txt /workouts/placeholder.txt 200
+/workouts/:id /workouts/placeholder 200
+
+/exercises/:id/* /exercises/placeholder/:splat 200
+/exercises/:id.txt /exercises/placeholder.txt 200
+/exercises/:id /exercises/placeholder 200
+
+/library/:id/* /library/placeholder/:splat 200
+/library/:id.txt /library/placeholder.txt 200
+/library/:id /library/placeholder 200
+
+/coach/clients/:id/exercises/:exerciseId/* /coach/clients/placeholder/exercises/placeholder/:splat 200
+/coach/clients/:id/exercises/:exerciseId.txt /coach/clients/placeholder/exercises/placeholder.txt 200
+/coach/clients/:id/exercises/:exerciseId /coach/clients/placeholder/exercises/placeholder 200
+
+/coach/clients/:id/session/* /coach/clients/placeholder/session/:splat 200
+/coach/clients/:id/session.txt /coach/clients/placeholder/session.txt 200
+/coach/clients/:id/session /coach/clients/placeholder/session 200
+
+/coach/clients/:id/workout/* /coach/clients/placeholder/workout/:splat 200
+/coach/clients/:id/workout.txt /coach/clients/placeholder/workout.txt 200
+/coach/clients/:id/workout /coach/clients/placeholder/workout 200
+
+/coach/clients/:id/measure/* /coach/clients/placeholder/measure/:splat 200
+/coach/clients/:id/measure.txt /coach/clients/placeholder/measure.txt 200
+/coach/clients/:id/measure /coach/clients/placeholder/measure 200
+
+/coach/clients/:id/* /coach/clients/placeholder/:splat 200
+/coach/clients/:id.txt /coach/clients/placeholder.txt 200
+/coach/clients/:id /coach/clients/placeholder 200

@@ -1,15 +1,13 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import { ExerciseHistoryView } from "@/components/exercise-history";
 import { BackLink, EmptyNote } from "@/components/sheet-ui";
 import { exerciseHistory } from "@/lib/records";
+import { useSheetParams } from "@/lib/use-sheet-params";
 import { useStore } from "@/lib/store";
 
 export default function CoachExerciseHistoryPage() {
-  const params = useParams<{ id: string; exerciseId: string }>();
-  const clientId = Array.isArray(params.id) ? params.id[0] : params.id;
-  const exerciseId = Array.isArray(params.exerciseId) ? params.exerciseId[0] : params.exerciseId;
+  const { id: clientId, exerciseId } = useSheetParams();
   const { data, user } = useStore();
   if (!data || !user || user.role !== "coach" || !clientId || !exerciseId) return null;
 

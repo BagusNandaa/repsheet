@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,6 +16,7 @@ import {
   inputClass,
 } from "@/components/sheet-ui";
 import { ProgressionFields, blankRuleDraft, parseRuleDraft, type RuleDraft } from "@/components/progression-editor";
+import { useSheetParams } from "@/lib/use-sheet-params";
 import { useStore } from "@/lib/store";
 import type { ProgressionRule } from "@/lib/types";
 
@@ -45,8 +46,7 @@ function blankDraft(): Draft {
 }
 
 export default function AssignWorkoutPage() {
-  const params = useParams<{ id: string }>();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { id } = useSheetParams();
   const { data, assignWorkout } = useStore();
   const router = useRouter();
   const [name, setName] = useState("");
